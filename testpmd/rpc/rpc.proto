@@ -1,0 +1,52 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = "github.com/redhat-nfvpe/container-perf-tools/standalone-testpmd/rpc";
+
+package testpmd;
+
+service testpmd {
+    rpc GetMacAddress(Pci) returns (MacAddress);
+    rpc GetPortInfo(Pci) returns (PortInfo);
+    rpc ListPorts(google.protobuf.Empty) returns (PortList);
+    rpc IcmpMode(google.protobuf.Empty) returns (Success);
+    rpc IoMode(google.protobuf.Empty) returns (Success);
+    rpc MacMode(PeerMacs) returns (Success);
+    rpc GetFwdInfo(google.protobuf.Empty) returns (FwdInfo);
+    rpc ClearFwdInfo(google.protobuf.Empty) returns (Success);
+}
+
+message Success {
+    bool success = 1;
+}
+
+message MacAddress {
+    string macAddress = 1;
+}
+
+message PortList {
+    repeated PortInfo portInfo = 1;
+}
+
+message PortInfo {
+    int32 portNum = 1;
+    string macAddress = 2;
+    string pciAddress = 3;
+}
+
+message Pci {
+   string pciAddress = 1;
+}
+
+message PeerMac {
+    int32 portNum = 1;
+    string macAddress = 2;
+}
+
+message PeerMacs {
+   repeated PeerMac peerMac = 1;
+}
+
+message FwdInfo {
+   string fwdInfoStr = 1;
+}
+
