@@ -1,32 +1,32 @@
-FROM docker.io/fedora:29
+FROM ubi8-minimal
+ARG TREX_VER="v2.88"
 USER root
-ENV TREX_VER "v2.88"
 
-RUN dnf -y --nodocs install dpdk dpdk-tools \
+RUN microdnf install dpdk dpdk-tools \
        		pciutils which \
        		gcc python3 python3-devel \
-       		net-tools util-linux \
-       		tmux gettext rdma-core libibverbs
+       		net-tools util-linux rdma-core libibverbs \
+       		tmux gettext tar procps-ng
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
-       && python3 -m pip install --no-cache-dir --upgrade wheel \
+       && python3 -m pip install --no-cache-dir --upgrade setuptools wheel \
        && python3 -m pip install --no-cache-dir grpcio \
        && python3 -m pip install --no-cache-dir grpcio-tools \
-       && python3 -m pip install --no-cache-dir psutil \
+       && python3 -m pip install --no-cache-dir psutil jsonschema \
        && mkdir -p /opt/trex \
        && mkdir -p /var/log/tgen \
        && mkdir -p /root/tgen \
-       && curl -o /root/tgen/binary-search.py https://raw.githubusercontent.com/atheurer/trafficgen/crucible1/binary-search.py \
-       && curl -o /root/tgen/trex_tg_lib.py https://raw.githubusercontent.com/atheurer/trafficgen/crucible1/trex_tg_lib.py \
-       && curl -o /root/tgen/trex-txrx.py https://raw.githubusercontent.com/atheurer/trafficgen/crucible1/trex-txrx.py \
-       && curl -o /root/tgen/trex-query.py https://raw.githubusercontent.com/atheurer/trafficgen/crucible1/trex-query.py \
-       && curl -o /root/tgen/tg_lib.py https://raw.githubusercontent.com/atheurer/trafficgen/crucible1/tg_lib.py \
-       && curl -k -o $TREX_VER.tar.gz https://trex-tgn.cisco.com/trex/release/$TREX_VER.tar.gz \
-       && tar xzf $TREX_VER.tar.gz -C /opt/trex && ln -sf /opt/trex/${TREX_VER} /opt/trex/current \
-       && rm -f $TREX_VER.tar.gz \
+       && curl -o /root/tgen/binary-search.py https://raw.githubusercontent.com/perftool-incubator/bench-trafficgen/main/trafficgen/binary-search.py \
+       && curl -o /root/tgen/trex_tg_lib.py https://raw.githubusercontent.com/perftool-incubator/bench-trafficgen/main/trafficgen/trex_tg_lib.py \
+       && curl -o /root/tgen/trex-txrx.py https://raw.githubusercontent.com/perftool-incubator/bench-trafficgen/main/trafficgen/trex-txrx.py \
+       && curl -o /root/tgen/trex-query.py https://raw.githubusercontent.com/perftool-incubator/bench-trafficgen/main/trafficgen/trex-query.py \
+       && curl -o /root/tgen/tg_lib.py https://raw.githubusercontent.com/perftool-incubator/bench-trafficgen/main/trafficgen/tg_lib.py \
+       && curl -k -o ${TREX_VER}.tar.gz https://trex-tgn.cisco.com/trex/release/$TREX_VER.tar.gz \
+       && tar xzf ${TREX_VER}.tar.gz -C /opt/trex && ln -sf /opt/trex/${TREX_VER} /opt/trex/current \
+       && rm -f ${TREX_VER}.tar.gz \
        && rm -f /opt/trex/$TREX_VER/trex_client_$TREX_VER.tar.gz \
        && curl -L -k -o /root/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_x86_64 \
        && chmod +x /root/dumb-init \
-       && dnf clean all && rm -rf /var/cache/yum
+       && microdnf -y clean all
 COPY server.py rpc.proto trex_cfg.yaml.tmpl /root/tgen/
 RUN pushd /root/tgen && python3 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. rpc.proto && rm rpc.proto && popd
 COPY trafficgen_entry.sh /root/
