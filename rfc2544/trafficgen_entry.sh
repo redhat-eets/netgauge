@@ -5,8 +5,10 @@ validation_seconds=${validation_seconds:-30}
 search_seconds=${search_seconds:-10}
 sniff_seconds=${sniff_seconds:-10}
 loss_ratio=${loss_ratio:-0.002}
-flows=${flows:-1}
+flows=${flows:-1024}
 frame_size=${frame_size:-64}
+rate=${rate:-25}
+steady_rate=${steady_rate:-0}
 page_prefix=trafficgen_trex_
 pciDeviceDir="/sys/bus/pci/devices"
 pciDriverDir="/sys/bus/pci/drivers"
@@ -223,13 +225,13 @@ else
             --search-runtime=${search_seconds} --validation-runtime=${validation_seconds} --max-loss-pct=${loss_ratio} \
             --traffic-direction=bidirectional --frame-size=${size} --num-flows=${flows} \
             --rate-tolerance-failure=fail --duplicate-packet-failure=retry-to-fail --negative-packet-loss=retry-to-fail \
-            --send-teaching-measurement --send-teaching-warmup \
+            --send-teaching-warmup \
             --teaching-warmup-packet-type=generic \
             --teaching-warmup-packet-rate=10000 \
-            --teaching-measurement-packet-type=generic \
             --use-src-ip-flows=1 --use-dst-ip-flows=1 \
             --use-src-mac-flows=0 --use-dst-mac-flows=0 \
-            --rate-unit=% --rate=25 \
+            --rate-unit=% --rate=${rate} \
+            --one-shot=${steady_rate} \
             --rate-tolerance=10 --runtime-tolerance=10 \
             ${dst_mac_opt} ${vf_extra_opt}
         done
