@@ -1,15 +1,9 @@
 
-# Stand-alone-trafficgen 
+# RFC2544 Performance Test Trafficgen 
 
-Trafficgen with binary search capability is commonly used in end-to-end NFV performance test.
-It makes sense to have the trafficgen seperated from the common tool set container and have its own 
-container image. This allows us to quickly add new capabilities to the trafficgen without 
-worrying the update impact to other tools in the common tool set container.
+RFC2544 performance test is commonly used to evaluate a system's performance when running DPDK workloads.
 
-So for the trafficgen, there are too choices,
-- This stand-alone trafficgen container. This can be used for either automation or manual
-test.
-- The common tool set container image. This can only be used for manual test.
+The container image build from this directory can be used for either automation or manual RFC2544 tests.
 
 ## Prerequisites
 + 2MB or 1GB huge pages
@@ -17,6 +11,11 @@ test.
 + in BIOS, enable VT (cpu virtualization technology)
 + intel_iommu in kernel argument
 + Example kargs: `default_hugepagesz=1G hugepagesz=1G hugepages=8 intel_iommu=on iommu=pt isolcpus=4-11`
++ two trafficgen ports pre-bound to vfio-pci driver.
+
+To achieve higher traffic rate, the two trafficgen ports should come from different NICs.
+
+In general using pysical function (PF) as the trafficgen ports can have better throughput performance than using the virtual function (VF). Building the container image based on TREX version 2.88 is recommended; the only exception is to use VF on Intel E810 nic as the trafficgen ports - in this case, building the container image based on TREX version 3.02 is recommended.   
 
 ## Openshift integration demo
 
@@ -26,7 +25,7 @@ test.
 
 `podman run -it --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 docker.io/cscojianzhan/trafficgen`
 
-Running the trafficgen on Intel E810 NIC requires an extra mount on /lib/firmware,
+Running the trafficgen on the PF of Intel E810 NIC requires an extra mount on /lib/firmware,
 `podman run -it --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules -v /lib/firmware:/lib/firmware --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 docker.io/cscojianzhan/trafficgen`
 
 The default DDP package is installed under /lib/firmware for the above to work,
@@ -37,7 +36,9 @@ ice.pkg
 
 How to install the DDP packet can be found in Intel's E810 DDP package release note.
 
-The trex version also make a different on E810. With the 2.88 trex version, the E810 PF works but VF does not; with 3.02 trex version, the E810 VF works but PF does not. This is unfortunate, one may have to rebuild the trafficgen container image based on the use case.
+If using VF on the E810 as the trafficgen ports, then the extra mount for the DDP package is not required.
+
+The trex version also make a different on E810. With the 2.88 trex version, the E810 PF works but VF does not; with 3.02 trex version, the E810 VF works but PF does not.
  
 ## Podman run example for automation
 
