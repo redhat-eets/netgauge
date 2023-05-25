@@ -61,15 +61,53 @@ To get the test result,
 To get the mac address of trafficgen test ports,
 `python client.py get-mac`
 
-## trafficgen client in other languages
+## Trafficgen REST API
 
-The trafficgen and client is programmed with Python. The trafficgen provides gRPC 
-interface so other programming languages can be used to control the trafficgen 
-over gRPC.
+The trafficgen and REST API are programmed with Python. The REST API allows one to control the trafficgen.
 
-The protocol buffer is defined in rpc.proto. When there is an update to this file, to 
-re-generate python code,
-`python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. rpc.proto`
+There are several endpoints provided, allowing both query and control over the trafficgen. Below are examples using curl, but the same can be done programmatically. For more information on implementation see `rest_schema.py` and `rest.py`.
 
-Other language have their own tool for code generation.
+The majority of endpoints accept GET requests. Only `/trafficgen/start` accepts POST, and will take a JSON object with required fields. There is serialization present, so consult `rest_schema.py`, along with examples below, for required fields and refer to the server logs for validation errors upon incorrect schema (likely showing on the client as a `500 Internal Server Error`).
 
+### Check if the Trafficgen is running
+```curl -v http://[IP]:[PORT]/trafficgen/running```
+
+Returns a boolean, true if running, false otherwise.
+
+### Start the Trafficgen
+```
+curl -X POST http://[IP]:[PORT]/trafficgen/start -H 'Content-Type: application/json' -d '{    
+    "l3":false,
+    "device_pairs":"0:1",
+    "search_runtime": 10,
+    "validation_runtime":30,
+    "num_flows":1,
+    "frame_size":64,
+    "max_loss_pct":0.002,
+    "sniff_runtime":3,
+    "search_granularity":5.0,
+    "binary_search_extra_args":[]
+}'
+```
+
+Returns a boolean, true if successful, false otherwise.
+
+### Stop the Trafficgen
+```curl -v http://[IP]:[PORT]/trafficgen/stop```
+
+Returns a boolean, true if successful, false otherwise.
+
+### Check if results are available
+```curl -v http://[IP]:[PORT]/result/available```
+
+Returns a boolean, true if available, false otherwise.
+
+### Get results
+```curl -v http://[IP]:[PORT]/result```
+
+Returns a dict, with results if available, empty otherwise.
+
+### Get a list of MAC addresses
+```curl -v http://[IP]:[PORT]/maclist```
+
+Returns a string of comma separated MACs if successful, an empty string otherwise.
