@@ -20,9 +20,11 @@ import json
 from flask import Flask, request, jsonify
 import subprocess
 import re
+import sys
+sys.path.append('/opt/trex/current/automation/trex_control_plane/interactive')
+from trex.stl.api import *
+from trex_tg_lib import *
 
-#from trex.stl.api import *
-#from trex_tg_lib import *
 
 app = Flask(__name__)
 
@@ -91,12 +93,11 @@ def get_result():
             portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
             portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
             portstats["rx_latency_average"] = stats[port]['rx_latency_average']
-            stats[port] = portstats
+            result[port] = portstats
     except:
         # return default value when something happens
         result = {}#rpc_pb2.Result()
     return jsonify(result)
-
 
 @app.route('/trafficgen/stop', methods=['GET'])
 def stop_trafficgen():
@@ -128,7 +129,7 @@ def start_trafficgen():
     if checkIfProcessRunning("binary-search"):
         if not killProcessByName("binary-search"):
             return jsonify(False)
-    if not request_data["l3"]:
+    if not bool(request_data["l3"]):
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
                         "--device-pairs=%s" % request_data["device_pairs"],
                         "--search-runtime=%d" % request_data["search_runtime"],

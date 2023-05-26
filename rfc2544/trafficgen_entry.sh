@@ -237,7 +237,8 @@ else
         done
     elif [ "$1" == "server" ]; then
         #taskset -c ${client_cpu} python server.py --extra-opts \"${vf_extra_opt}\"
-        taskset -c ${client_cpu} flask run
+        taskset -c ${client_cpu} flask run --host=0.0.0.0
+	#flask run
     fi
 fi
 

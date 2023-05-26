@@ -1,6 +1,7 @@
 FROM ubi8-minimal
 ARG TREX_VER="v2.88"
 USER root
+ENV FLASK_APP=rest.py
 
 RUN microdnf install dpdk dpdk-tools \
        		pciutils which \
@@ -12,6 +13,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && python3 -m pip install --no-cache-dir grpcio \
        && python3 -m pip install --no-cache-dir grpcio-tools \
        && python3 -m pip install --no-cache-dir psutil jsonschema \
+       && python3 -m pip install --no-cache-dir flask \
        && mkdir -p /opt/trex \
        && mkdir -p /var/log/tgen \
        && mkdir -p /root/tgen \
@@ -27,7 +29,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && curl -L -k -o /root/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_x86_64 \
        && chmod +x /root/dumb-init \
        && microdnf -y clean all --enablerepo='*'
-COPY server.py rpc.proto trex_cfg.yaml.tmpl /root/tgen/
+COPY rest.py server.py rpc.proto trex_cfg.yaml.tmpl /root/tgen/
 RUN pushd /root/tgen && python3 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. rpc.proto && rm rpc.proto && popd
 COPY trafficgen_entry.sh /root/
 RUN chmod 777 /root/trafficgen_entry.sh /root/tgen/binary-search.py /root/tgen/trex-query.py /root/tgen/trex-txrx.py \
@@ -35,5 +37,5 @@ RUN chmod 777 /root/trafficgen_entry.sh /root/tgen/binary-search.py /root/tgen/t
        && ln -f -s /usr/bin/python3 /usr/bin/python
 
 ENTRYPOINT ["/root/dumb-init", "--"]
-CMD ["/root/trafficgen_entry.sh", "start"]
-
+#CMD ["/root/trafficgen_entry.sh", "start"]
+CMD ["/root/trafficgen_entry.sh", "server"]
