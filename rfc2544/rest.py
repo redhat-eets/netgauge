@@ -18,8 +18,11 @@ import os.path
 import psutil
 import json
 from flask import Flask, request, jsonify
-from trex.stl.api import *
-from trex_tg_lib import *
+import subprocess
+import re
+
+#from trex.stl.api import *
+#from trex_tg_lib import *
 
 app = Flask(__name__)
 
@@ -64,10 +67,35 @@ def killProcessByName(processName):
 def is_trafficgen_running():
     return jsonify(checkIfProcessRunning("binary-search"))
 
+
+#TODO: serialize
 @app.route('/result', methods=['GET'])
 def get_result():
     pattern = re.compile("^[0-9]+$")
-    # NOTE: NOT COMPLETE
+    result = {} #rpc_pb2.Result()
+    try:
+        with open('binary-search.json') as f:
+            data = json.load(f)
+        stats = data["trials"][-1]["stats"]
+        for port in stats:
+            if not pattern.match(port):
+                continue
+            portstats = {}#result.stats.add()
+            #portstats.port = port
+            portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
+            portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
+            portstats["tx_pps"] = stats[port]['tx_pps']
+            portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
+            portstats["rx_l2_bps"] = stats[port]['rx_l2_bps']
+            portstats["rx_pps"] = stats[port]['rx_pps']
+            portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
+            portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
+            portstats["rx_latency_average"] = stats[port]['rx_latency_average']
+            stats[port] = portstats
+    except:
+        # return default value when something happens
+        result = {}#rpc_pb2.Result()
+    return jsonify(result)
 
 
 @app.route('/trafficgen/stop', methods=['GET'])
@@ -92,45 +120,47 @@ def isResultAvailable():
         return jsonify(False)
 
 
-@app.route('/trafficgen/start', methods=['GET'])
+#TODO: Serialize
+@app.route('/trafficgen/start', methods=['POST'])
 def start_trafficgen():
+    request_data = request.get_json()
     # if an instance is already running, kill it first
     if checkIfProcessRunning("binary-search"):
         if not killProcessByName("binary-search"):
             return jsonify(False)
-    if not request.l3:
+    if not request_data["l3"]:
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
-                        "--device-pairs=%s" % request.device_pairs,
-                        "--search-runtime=%d" % request.search_runtime,
-                        "--validation-runtime=%d" % request.validation_runtime,
-                        "--num-flows=%d" % request.num_flows,
-                        "--frame-size=%d" % request.frame_size,
-                        "--max-loss-pct=%f" % request.max_loss_pct,
-                        "--sniff-runtime=%d" % request.sniff_runtime,
-                        "--search-granularity=%f" % request.search_granularity,
+                        "--device-pairs=%s" % request_data["device_pairs"],
+                        "--search-runtime=%d" % request_data["search_runtime"],
+                        "--validation-runtime=%d" % request_data["validation_runtime"],
+                        "--num-flows=%d" % request_data["num_flows"],
+                        "--frame-size=%d" % request_data["frame_size"],
+                        "--max-loss-pct=%f" % request_data["max_loss_pct"],
+                        "--sniff-runtime=%d" % request_data["sniff_runtime"],
+                        "--search-granularity=%f" % request_data["search_granularity"],
                         "--rate-tolerance=50",
                         "--runtime-tolerance=50",
                         "--negative-packet-loss=fail",
-                        "--rate-tolerance-failure=fail"] + binary_search_extra_args)
+                        "--rate-tolerance-failure=fail"] + request_data["binary_search_extra_args"])
     else:
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
-                        "--device-pairs=%s" % request.device_pairs,
-                        "--dst-macs=%s" % request.dst_macs,
-                        "--search-runtime=%d" % request.search_runtime,
-                        "--validation-runtime=%d" % request.validation_runtime,
-                        "--num-flows=%d" % request.num_flows,
-                        "--frame-size=%d" % request.frame_size,
-                        "--max-loss-pct=%f" % request.max_loss_pct,
-                        "--sniff-runtime=%d" % request.sniff_runtime,
+                        "--device-pairs=%s" % request_data["device_pairs"],
+                        "--dst-macs=%s" % request_data["dst_macs"],
+                        "--search-runtime=%d" % request_data["search_runtime"],
+                        "--validation-runtime=%d" % request_data["validation_runtime"],
+                        "--num-flows=%d" % request_data["num_flows"],
+                        "--frame-size=%d" % request_data["frame_size"],
+                        "--max-loss-pct=%f" % request_data["max_loss_pct"],
+                        "--sniff-runtime=%d" % request_data["sniff_runtime"],
                         "--rate-tolerance=50",
                         "--runtime-tolerance=50",
                         "--negative-packet-loss=fail",
-                        "--search-granularity=%f" % request.search_granularity,
-                        "--rate-tolerance-failure=fail"] + binary_search_extra_args)
+                        "--search-granularity=%f" % request_data["search_granularity"],
+                        "--rate-tolerance-failure=fail"] + request_data["binary_search_extra_args"])
     if checkIfProcessRunning("binary-search"):
-        return rpc_pb2.Success(success=True)
+        return jsonify(True)
     else:
-        return rpc_pb2.Success(success=False)
+        return jsonify(False)
 
 
 @app.route('/maclist', methods=['GET'])
