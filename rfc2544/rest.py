@@ -41,7 +41,8 @@ class ResultSchema(Schema):
     rx_latency_maximum = fields.Float()
     rx_latency_average = fields.Float()
 
-result_dict_schema = fields.Dict(values=ResultSchema)
+class ResultDictSchema(Schema):
+    results = fields.Dict(keys=fields.Int(), values=fields.Nested(ResultSchema))
 
 
 def checkIfProcessRunning(processName):
@@ -105,7 +106,8 @@ def get_result():
     except:
         # return default value when something happens
         result = {}#rpc_pb2.Result()
-    return result_dict_schema.load(result)
+    result_dict_schema = ResultDictSchema()
+    return result_dict_schema.dump(result)
 
 @app.route('/trafficgen/stop', methods=['GET'])
 def stop_trafficgen():
