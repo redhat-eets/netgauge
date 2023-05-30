@@ -92,22 +92,33 @@ def is_trafficgen_running():
 def get_result():
     pattern = re.compile("^[0-9]+$")
     result = {} #rpc_pb2.Result()
-    try:
-        with open('binary-search.json') as f:
-            data = json.load(f)
-        stats = data["trials"][-1]["stats"]
-        for port in stats:
-            if not pattern.match(port):
-                continue
-            #portstats.port = port
-            result_schema = ResultSchema()
-            result_schema.dump(stats[port])
-            result[port] = result_schema
-    except:
+    #try:
+    with open('binary-search.json') as f:
+        data = json.load(f)
+    stats = data["trials"][-1]["stats"]
+    for port in stats:
+        if not pattern.match(port):
+            continue
+        portstats = {}
+        portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
+        portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
+        portstats["tx_pps"] = stats[port]['tx_pps']
+        portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
+        portstats["rx_l2_bps"] = stats[port]['rx_l2_bps']
+        portstats["rx_pps"] = stats[port]['rx_pps']
+        portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
+        portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
+        portstats["rx_latency_average"] = stats[port]['rx_latency_average']
+        
+        result_schema = ResultSchema()
+        result_schema.dump(portstats)
+        result[port] = result_schema
+    #except:
         # return default value when something happens
-        result = {}#rpc_pb2.Result()
+    #    result = {}#rpc_pb2.Result()
     result_dict_schema = ResultDictSchema()
-    return result_dict_schema.dump(result)
+    output = result_dict_schema.load(result)
+    return jsonify(output)
 
 @app.route('/trafficgen/stop', methods=['GET'])
 def stop_trafficgen():
