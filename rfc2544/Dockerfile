@@ -14,6 +14,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && python3 -m pip install --no-cache-dir grpcio-tools \
        && python3 -m pip install --no-cache-dir psutil jsonschema \
        && python3 -m pip install --no-cache-dir flask \
+       && python3 -m pip install --no-cache-dir marshmallow \
        && mkdir -p /opt/trex \
        && mkdir -p /var/log/tgen \
        && mkdir -p /root/tgen \

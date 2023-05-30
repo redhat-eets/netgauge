@@ -24,9 +24,25 @@ import sys
 sys.path.append('/opt/trex/current/automation/trex_control_plane/interactive')
 from trex.stl.api import *
 from trex_tg_lib import *
+from marshmallow import Schema, fields
 
 
 app = Flask(__name__)
+
+
+class ResultSchema(Schema):
+    tx_l1_bps = fields.Float()
+    tx_l2_bps = fields.Float()
+    tx_pps = fields.Float()
+    rx_l1_bps = fields.Float()
+    rx_l2_bps = fields.Float()
+    rx_pps = fields.Float()
+    rx_latency_minimum = fields.Float()
+    rx_latency_maximum = fields.Float()
+    rx_latency_average = fields.Float()
+
+result_dict_schema = fields.Dict(values=ResultSchema)
+
 
 def checkIfProcessRunning(processName):
     '''
@@ -82,22 +98,14 @@ def get_result():
         for port in stats:
             if not pattern.match(port):
                 continue
-            portstats = {}#result.stats.add()
             #portstats.port = port
-            portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
-            portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
-            portstats["tx_pps"] = stats[port]['tx_pps']
-            portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
-            portstats["rx_l2_bps"] = stats[port]['rx_l2_bps']
-            portstats["rx_pps"] = stats[port]['rx_pps']
-            portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
-            portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
-            portstats["rx_latency_average"] = stats[port]['rx_latency_average']
-            result[port] = portstats
+            result_schema = ResultSchema()
+            result_schema.dump(stats[port])
+            result[port] = result_schema
     except:
         # return default value when something happens
         result = {}#rpc_pb2.Result()
-    return jsonify(result)
+    return result_dict_schema.load(result)
 
 @app.route('/trafficgen/stop', methods=['GET'])
 def stop_trafficgen():
