@@ -117,7 +117,7 @@ def get_result():
             if not pattern.match(port):
                 continue
             portstats = {}
-            portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
+            '''portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
             portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
             portstats["tx_pps"] = stats[port]['tx_pps']
             portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
@@ -125,10 +125,10 @@ def get_result():
             portstats["rx_pps"] = stats[port]['rx_pps']
             portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
             portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
-            portstats["rx_latency_average"] = stats[port]['rx_latency_average']
+            portstats["rx_latency_average"] = stats[port]['rx_latency_average']'''
 
             result_schema = ResultSchema()
-            results = result_schema.load(portstats)
+            results = result_schema.load(stats[port], unknown = EXCLUDE)
             result[port] = results
     except:
         # return default value when something happens
@@ -214,8 +214,8 @@ def getMacList():
             c.connect()
             port_info = c.get_port_info(ports = [0, 1])
             port_schema = PortSchema()
-            port_0 = port_schema.load(port_info[0])
-            port_1 = port_schema.load(port_info[1])
+            port_0 = port_schema.load(port_info[0], unknown=EXCLUDE)
+            port_1 = port_schema.load(port_info[1], unknown=EXCLUDE)
             macList = port_0['hw_mac'] + ',' + port_1['hw_mac']
         except TRexError as e:
             macList = ""
