@@ -70,7 +70,7 @@ There are several endpoints provided, allowing both query and control over the t
 The majority of endpoints accept GET requests. Only `/trafficgen/start` accepts POST, and will take a JSON object with required fields. There is serialization present, so consult `rest_schema.py`, along with examples below, for required fields and refer to the server logs for validation errors upon incorrect schema (likely showing on the client as a `500 Internal Server Error`).
 
 ### Check if the Trafficgen is running
-`curl -v http://[IP]:[PORT]/trafficgen/running`
+```curl -v http://[IP]:[PORT]/trafficgen/running```
 Returns a boolean, true if running, false otherwise.
 
 ### Start the Trafficgen
@@ -91,17 +91,17 @@ curl -X POST http://[IP]:[PORT]/trafficgen/start -H 'Content-Type: application/j
 Returns a boolean, true if successful, false otherwise.
 
 ### Stop the Trafficgen
-`curl -v http://[IP]:[PORT]/trafficgen/stop`
+```curl -v http://[IP]:[PORT]/trafficgen/stop```
 Returns a boolean, true if successful, false otherwise.
 
 ### Check if results are available
-`curl -v http://[IP]:[PORT]/result/available`
+```curl -v http://[IP]:[PORT]/result/available```
 Returns a boolean, true if available, false otherwise.
 
 ### Get results
-`curl -v http://[IP]:[PORT]/result`
+```curl -v http://[IP]:[PORT]/result```
 Returns a dict, with results if available, empty otherwise.
 
 ### Get a list of MAC addresses
-`curl -v http://[IP]:[PORT]/maclist`
+```curl -v http://[IP]:[PORT]/maclist```
 Returns a string of comma separated MACs if successful, an empty string otherwise.
