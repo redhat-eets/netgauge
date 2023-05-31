@@ -236,7 +236,7 @@ else
             ${dst_mac_opt} ${vf_extra_opt}
         done
     elif [ "$1" == "server" ]; then
-        taskset -c ${client_cpu} flask run --host=0.0.0.0
+        taskset -c ${client_cpu} python rest.py
     fi
 fi
 

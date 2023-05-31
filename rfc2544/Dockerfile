@@ -1,7 +1,6 @@
 FROM ubi8-minimal
 ARG TREX_VER="v2.88"
 USER root
-ENV FLASK_APP=rest.py
 
 RUN microdnf install dpdk dpdk-tools \
        		pciutils which \
@@ -15,6 +14,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && python3 -m pip install --no-cache-dir psutil jsonschema \
        && python3 -m pip install --no-cache-dir flask \
        && python3 -m pip install --no-cache-dir marshmallow \
+       && python3 -m pip install --no-cache-dir waitress \
        && mkdir -p /opt/trex \
        && mkdir -p /var/log/tgen \
        && mkdir -p /root/tgen \

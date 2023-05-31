@@ -19,6 +19,7 @@ import re
 from rest_schema import ResultSchema, StartSchema, StartSchemal3, PortSchema
 import subprocess
 import sys
+from waitress import serve
 
 sys.path.append("/opt/trex/current/automation/trex_control_plane/interactive")
 from trex.stl.api import *  # noqa: E402, F403
@@ -240,3 +241,6 @@ class RestApi:
         finally:
             c.disconnect()
             return jsonify(macList)
+
+if __name__ == "__main__":
+    serve(app, host="0.0.0.0", port=8080)
