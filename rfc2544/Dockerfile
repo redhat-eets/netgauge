@@ -39,4 +39,4 @@ RUN chmod 777 /root/trafficgen_entry.sh /root/tgen/binary-search.py /root/tgen/t
 
 ENTRYPOINT ["/root/dumb-init", "--"]
 #CMD ["/root/trafficgen_entry.sh", "start"]
-CMD ["/root/trafficgen_entry.sh", "server"]
+CMD ["/root/trafficgen_entry.sh", "server", "rest"]

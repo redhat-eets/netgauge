@@ -98,11 +98,16 @@ class PortSchema(Schema):
     )
 
 
-def checkIfProcessRunning(processName):
+def checkIfProcessRunning(processName: str) -> bool:
+    """Check if there is any running process that contains the given name processName.
+
+    Args:
+        processName(String): The name of the process
+
+    Returns:
+        Boolean: True if running, False otherwise
     """
-    Check if there is any running process that contains the given name processName.
-    """
-    # Iterate over the all the running process
+    # Iterate over the all the running processes.
     for proc in psutil.process_iter():
         try:
             pinfo = proc.as_dict(attrs=["pid", "name", "status"])
@@ -118,10 +123,14 @@ def checkIfProcessRunning(processName):
     return False
 
 
-def killProcessByName(processName):
-    """
-    kill all the PIDs whose name contains
-    the given string processName
+def killProcessByName(processName: str) -> bool:
+    """Kill all PIDs whose name contains the given processName.
+
+    Args:
+        processName(String): The name of the process
+
+    Returns:
+        Boolean: True on success, False otherwise
     """
     # Iterate over the all the running process
     for proc in psutil.process_iter():
@@ -138,13 +147,29 @@ def killProcessByName(processName):
 
 class RestApi:
     @app.route("/trafficgen/running", methods=["GET"])
-    def is_trafficgen_running():
+    def is_trafficgen_running() -> dict:
+        """Endpoint to check for a running trafficgen via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped boolean result of process running
+        """
         return jsonify(checkIfProcessRunning("binary-search"))
 
     @app.route("/result", methods=["GET"])
-    def get_result():
+    def get_result() -> dict:
+        """Endpoint to fetch results via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped dict result
+        """
         pattern = re.compile("^[0-9]+$")
-        result = {}  # rpc_pb2.Result()
+        result = {}
         try:
             with open("binary-search.json") as f:
                 data = json.load(f)
@@ -156,20 +181,35 @@ class RestApi:
                 results = result_schema.load(stats[port], unknown=EXCLUDE)
                 result[port] = results
         except Exception:
-            # return default value when something happens
+            # return an empty dict upon exception
             result = {}
 
         return jsonify(result)
 
     @app.route("/trafficgen/stop", methods=["GET"])
-    def stop_trafficgen():
+    def stop_trafficgen() -> dict:
+        """Endpoint to stop trafficgen via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped boolean result of stopping trafficgen
+        """
         return jsonify(killProcessByName("binary-search"))
 
     @app.route("/result/available", methods=["GET"])
-    def isResultAvailable():
+    def isResultAvailable() -> dict:
+        """Check if results are available via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped boolean result
         """
-        #If result file is not present or last trial is not pass, then result is not available
-        """
+        # If the result file is not present or the last trial did not pass,
+        # then results are not available
         try:
             with open("binary-search.json") as f:
                 data = json.load(f)
@@ -182,9 +222,17 @@ class RestApi:
             return jsonify(False)
 
     @app.route("/trafficgen/start", methods=["POST"])
-    def start_trafficgen():
+    def start_trafficgen() -> dict:
+        """Endpoint to start trafficgen via POST.
+
+        Args:
+            None, POST requires StartSchema or StartSchemal3 JSON
+
+        Returns:
+            dict: json wrapped boolean result of starting trafficgen
+        """
         request_data = request.get_json()
-        # if an instance is already running, kill it first
+        # If an instance is already running, kill it first
         if checkIfProcessRunning("binary-search"):
             if not killProcessByName("binary-search"):
                 return jsonify(False)
@@ -240,6 +288,14 @@ class RestApi:
 
     @app.route("/maclist", methods=["GET"])
     def getMacList():
+        """Endpoint to get mac addresses via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped string list of macs
+        """
         macList = ""
         try:
             c = STLClient(server="localhost")  # noqa: F405
