@@ -242,5 +242,6 @@ class RestApi:
             c.disconnect()
             return jsonify(macList)
 
-if __name__ == "__main__":
-    serve(app, host="0.0.0.0", port=8080)
+
+def create_app():
+   return app
