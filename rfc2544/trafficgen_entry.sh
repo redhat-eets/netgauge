@@ -236,11 +236,7 @@ else
             ${dst_mac_opt} ${vf_extra_opt}
         done
     elif [ "$1" == "server" ]; then
-        if [ "$2" == "rest"]; then
-            taskset -c ${client_cpu} flask run --host=0.0.0.0
-        else
-            taskset -c ${client_cpu} python grpc.py --extra-opts \"${vf_extra_opt}\"
-        fi
+        taskset -c ${client_cpu} flask run --host=0.0.0.0
     fi
 fi
 
