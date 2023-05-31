@@ -24,7 +24,7 @@ import sys
 sys.path.append('/opt/trex/current/automation/trex_control_plane/interactive')
 from trex.stl.api import *
 from trex_tg_lib import *
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, EXCLUDE
 
 
 app = Flask(__name__)
@@ -116,17 +116,6 @@ def get_result():
         for port in stats:
             if not pattern.match(port):
                 continue
-            portstats = {}
-            '''portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
-            portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
-            portstats["tx_pps"] = stats[port]['tx_pps']
-            portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
-            portstats["rx_l2_bps"] = stats[port]['rx_l2_bps']
-            portstats["rx_pps"] = stats[port]['rx_pps']
-            portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
-            portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
-            portstats["rx_latency_average"] = stats[port]['rx_latency_average']'''
-
             result_schema = ResultSchema()
             results = result_schema.load(stats[port], unknown = EXCLUDE)
             result[port] = results
