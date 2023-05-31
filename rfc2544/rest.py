@@ -59,6 +59,9 @@ class StartSchemal3(StartSchema):
     dst_macs = fields.String(required=True, error_messages={"required": "dst_macs is required."})
 
 
+class PortSchema(Schema):
+    hw_mac = fields.String(required=True, error_messages={"required": "hw_mac is required."})
+
 def checkIfProcessRunning(processName):
     '''
     Check if there is any running process that contains the given name processName.
@@ -127,7 +130,6 @@ def get_result():
             result_schema = ResultSchema()
             results = result_schema.load(portstats)
             result[port] = results
-            print(result_schema)
     except:
         # return default value when something happens
         result = {}
@@ -167,7 +169,6 @@ def start_trafficgen():
             return jsonify(False)
     start_schema = StartSchema()
     result = start_schema.load(request_data)
-    print(result)
     if not result['l3']:
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
                         "--device-pairs=%s" % result["device_pairs"],
@@ -212,7 +213,10 @@ def getMacList():
             c = STLClient(server = 'localhost')
             c.connect()
             port_info = c.get_port_info(ports = [0, 1])
-            macList = port_info[0]['hw_mac'] + ',' + port_info[1]['hw_mac']
+            port_schema = PortSchema()
+            port_0 = port_schema.load(port_info[0])
+            port_1 = port_schema.load(port_info[1])
+            macList = port_0['hw_mac'] + ',' + port_1['hw_mac']
         except TRexError as e:
             macList = ""
         finally:
