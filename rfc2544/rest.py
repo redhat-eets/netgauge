@@ -88,69 +88,6 @@ class RestApi:
         """
         return jsonify(checkIfProcessRunning("binary-search"))
 
-    @app.route("/result", methods=["GET"])
-    def get_result() -> dict:
-        """Endpoint to fetch results via GET.
-
-        Args:
-            None
-
-        Returns:
-            dict: json wrapped dict result
-        """
-        pattern = re.compile("^[0-9]+$")
-        result = {}
-        try:
-            with open("binary-search.json") as f:
-                data = json.load(f)
-            stats = data["trials"][-1]["stats"]
-            for port in stats:
-                if not pattern.match(port):
-                    continue
-                result_schema = ResultSchema()
-                results = result_schema.load(stats[port], unknown=EXCLUDE)
-                result[port] = results
-        except Exception:
-            # return an empty dict upon exception
-            result = {}
-
-        return jsonify(result)
-
-    @app.route("/trafficgen/stop", methods=["GET"])
-    def stop_trafficgen() -> dict:
-        """Endpoint to stop trafficgen via GET.
-
-        Args:
-            None
-
-        Returns:
-            dict: json wrapped boolean result of stopping trafficgen
-        """
-        return jsonify(killProcessByName("binary-search"))
-
-    @app.route("/result/available", methods=["GET"])
-    def isResultAvailable() -> dict:
-        """Check if results are available via GET.
-
-        Args:
-            None
-
-        Returns:
-            dict: json wrapped boolean result
-        """
-        # If the result file is not present or the last trial did not pass,
-        # then results are not available
-        try:
-            with open("binary-search.json") as f:
-                data = json.load(f)
-            result = data["trials"][-1]["result"]
-            if result == "pass":
-                return jsonify(True)
-            else:
-                return jsonify(False)
-        except Exception:
-            return jsonify(False)
-
     @app.route("/trafficgen/start", methods=["POST"])
     def start_trafficgen() -> dict:
         """Endpoint to start trafficgen via POST.
@@ -215,6 +152,69 @@ class RestApi:
             return jsonify(True)
         else:
             return jsonify(False)
+
+    @app.route("/trafficgen/stop", methods=["GET"])
+    def stop_trafficgen() -> dict:
+        """Endpoint to stop trafficgen via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped boolean result of stopping trafficgen
+        """
+        return jsonify(killProcessByName("binary-search"))
+
+    @app.route("/result/available", methods=["GET"])
+    def isResultAvailable() -> dict:
+        """Check if results are available via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped boolean result
+        """
+        # If the result file is not present or the last trial did not pass,
+        # then results are not available
+        try:
+            with open("binary-search.json") as f:
+                data = json.load(f)
+            result = data["trials"][-1]["result"]
+            if result == "pass":
+                return jsonify(True)
+            else:
+                return jsonify(False)
+        except Exception:
+            return jsonify(False)
+
+    @app.route("/result", methods=["GET"])
+    def get_result() -> dict:
+        """Endpoint to fetch results via GET.
+
+        Args:
+            None
+
+        Returns:
+            dict: json wrapped dict result
+        """
+        pattern = re.compile("^[0-9]+$")
+        result = {}
+        try:
+            with open("binary-search.json") as f:
+                data = json.load(f)
+            stats = data["trials"][-1]["stats"]
+            for port in stats:
+                if not pattern.match(port):
+                    continue
+                result_schema = ResultSchema()
+                results = result_schema.load(stats[port], unknown=EXCLUDE)
+                result[port] = results
+        except Exception:
+            # return an empty dict upon exception
+            result = {}
+
+        return jsonify(result)
 
     @app.route("/maclist", methods=["GET"])
     def getMacList():
