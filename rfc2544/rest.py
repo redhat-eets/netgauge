@@ -52,7 +52,7 @@ class StartSchema(Schema):
     max_loss_pct = fields.Float(required=True)
     sniff_runtime = fields.Int(required=True)
     search_granularity = fields.Float(required=True)
-    abinary_search_extra_args = fields.List(required=True)
+    binary_search_extra_args = fields.List(fields.String(), required=False)
 
 
 class StartSchemal3(StartSchema):
@@ -167,35 +167,38 @@ def start_trafficgen():
             return jsonify(False)
     start_schema = StartSchema()
     result = start_schema.load(request_data)
-    if not result.l3:
+    print(result)
+    if not result['l3']:
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
-                        "--device-pairs=%s" % request_data["device_pairs"],
-                        "--search-runtime=%d" % request_data["search_runtime"],
-                        "--validation-runtime=%d" % request_data["validation_runtime"],
-                        "--num-flows=%d" % request_data["num_flows"],
-                        "--frame-size=%d" % request_data["frame_size"],
-                        "--max-loss-pct=%f" % request_data["max_loss_pct"],
-                        "--sniff-runtime=%d" % request_data["sniff_runtime"],
-                        "--search-granularity=%f" % request_data["search_granularity"],
+                        "--device-pairs=%s" % result["device_pairs"],
+                        "--search-runtime=%d" % result["search_runtime"],
+                        "--validation-runtime=%d" % result["validation_runtime"],
+                        "--num-flows=%d" % result["num_flows"],
+                        "--frame-size=%d" % result["frame_size"],
+                        "--max-loss-pct=%f" % result["max_loss_pct"],
+                        "--sniff-runtime=%d" % result["sniff_runtime"],
+                        "--search-granularity=%f" % result["search_granularity"],
                         "--rate-tolerance=50",
                         "--runtime-tolerance=50",
                         "--negative-packet-loss=fail",
-                        "--rate-tolerance-failure=fail"] + request_data["binary_search_extra_args"])
+                        "--rate-tolerance-failure=fail"] + result["binary_search_extra_args"])
     else:
+        start_schema_l3 = StartSchemal3()
+        result = start_schema_l3.load(request_data)
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
-                        "--device-pairs=%s" % request_data["device_pairs"],
-                        "--dst-macs=%s" % request_data["dst_macs"],
-                        "--search-runtime=%d" % request_data["search_runtime"],
-                        "--validation-runtime=%d" % request_data["validation_runtime"],
-                        "--num-flows=%d" % request_data["num_flows"],
-                        "--frame-size=%d" % request_data["frame_size"],
-                        "--max-loss-pct=%f" % request_data["max_loss_pct"],
-                        "--sniff-runtime=%d" % request_data["sniff_runtime"],
+                        "--device-pairs=%s" % result["device_pairs"],
+                        "--dst-macs=%s" % result["dst_macs"],
+                        "--search-runtime=%d" % result["search_runtime"],
+                        "--validation-runtime=%d" % result["validation_runtime"],
+                        "--num-flows=%d" % result["num_flows"],
+                        "--frame-size=%d" % result["frame_size"],
+                        "--max-loss-pct=%f" % result["max_loss_pct"],
+                        "--sniff-runtime=%d" % result["sniff_runtime"],
                         "--rate-tolerance=50",
                         "--runtime-tolerance=50",
                         "--negative-packet-loss=fail",
-                        "--search-granularity=%f" % request_data["search_granularity"],
-                        "--rate-tolerance-failure=fail"] + request_data["binary_search_extra_args"])
+                        "--search-granularity=%f" % result["search_granularity"],
+                        "--rate-tolerance-failure=fail"] + result["binary_search_extra_args"])
     if checkIfProcessRunning("binary-search"):
         return jsonify(True)
     else:
