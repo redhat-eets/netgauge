@@ -71,6 +71,7 @@ The majority of endpoints accept GET requests. Only `/trafficgen/start` accepts 
 
 ### Check if the Trafficgen is running
 ```curl -v http://[IP]:[PORT]/trafficgen/running```
+
 Returns a boolean, true if running, false otherwise.
 
 ### Start the Trafficgen
@@ -88,20 +89,25 @@ curl -X POST http://[IP]:[PORT]/trafficgen/start -H 'Content-Type: application/j
     "binary_search_extra_args":[]
 }'
 ```
+
 Returns a boolean, true if successful, false otherwise.
 
 ### Stop the Trafficgen
 ```curl -v http://[IP]:[PORT]/trafficgen/stop```
+
 Returns a boolean, true if successful, false otherwise.
 
 ### Check if results are available
 ```curl -v http://[IP]:[PORT]/result/available```
+
 Returns a boolean, true if available, false otherwise.
 
 ### Get results
 ```curl -v http://[IP]:[PORT]/result```
+
 Returns a dict, with results if available, empty otherwise.
 
 ### Get a list of MAC addresses
 ```curl -v http://[IP]:[PORT]/maclist```
+
 Returns a string of comma separated MACs if successful, an empty string otherwise.
