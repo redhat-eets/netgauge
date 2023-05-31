@@ -49,18 +49,6 @@ podman pod create -p 50051:50051 -n trafficgen
 podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 --pod trafficgen -e pci_list=0000:03:00.0,0000:03:00.1  docker.io/cscojianzhan/trafficgen /root/trafficgen_entry.sh server
 ```
 
-In the automation script, start the trafficgen,
-`python client.py start`
-
-To check the trafficgen status,
-`python client.py status`
-
-To get the test result,
-`python client.py get-result`
-
-To get the mac address of trafficgen test ports,
-`python client.py get-mac`
-
 ## Trafficgen REST API
 
 The trafficgen and REST API are programmed with Python. The REST API allows one to control the trafficgen.
