@@ -31,18 +31,32 @@ app = Flask(__name__)
 
 
 class ResultSchema(Schema):
-    tx_l1_bps = fields.Float()
-    tx_l2_bps = fields.Float()
-    tx_pps = fields.Float()
-    rx_l1_bps = fields.Float()
-    rx_l2_bps = fields.Float()
-    rx_pps = fields.Float()
-    rx_latency_minimum = fields.Float()
-    rx_latency_maximum = fields.Float()
-    rx_latency_average = fields.Float()
+    tx_l1_bps = fields.Float(required=True)
+    tx_l2_bps = fields.Float(required=True)
+    tx_pps = fields.Float(required=True)
+    rx_l1_bps = fields.Float(required=True)
+    rx_l2_bps = fields.Float(required=True)
+    rx_pps = fields.Float(required=True)
+    rx_latency_minimum = fields.Float(required=True)
+    rx_latency_maximum = fields.Float(required=True)
+    rx_latency_average = fields.Float(required=True)
 
-class ResultDictSchema(Schema):
-    results = fields.Dict(keys=fields.Int(), values=fields.Nested(ResultSchema))
+
+class StartSchema(Schema):
+    l3 = fields.Bool(required=True)
+    device_pairs = fields.String(required=True)
+    search_runtime = fields.Int(required=True)
+    validation_runtime = fields.Int(required=True)
+    num_flows = fields.Int(required=True)
+    frame_size = fields.Int(required=True)
+    max_loss_pct = fields.Float(required=True)
+    sniff_runtime = fields.Int(required=True)
+    search_granularity = fields.Float(required=True)
+    abinary_search_extra_args = fields.List(required=True)
+
+
+class StartSchemal3(StartSchema):
+    dst_macs = fields.String(required=True)
 
 
 def checkIfProcessRunning(processName):
@@ -92,33 +106,34 @@ def is_trafficgen_running():
 def get_result():
     pattern = re.compile("^[0-9]+$")
     result = {} #rpc_pb2.Result()
-    #try:
-    with open('binary-search.json') as f:
-        data = json.load(f)
-    stats = data["trials"][-1]["stats"]
-    for port in stats:
-        if not pattern.match(port):
-            continue
-        portstats = {}
-        portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
-        portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
-        portstats["tx_pps"] = stats[port]['tx_pps']
-        portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
-        portstats["rx_l2_bps"] = stats[port]['rx_l2_bps']
-        portstats["rx_pps"] = stats[port]['rx_pps']
-        portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
-        portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
-        portstats["rx_latency_average"] = stats[port]['rx_latency_average']
-        
-        result_schema = ResultSchema()
-        result_schema.dump(portstats)
-        result[port] = result_schema
-    #except:
+    try:
+        with open('binary-search.json') as f:
+            data = json.load(f)
+        stats = data["trials"][-1]["stats"]
+        for port in stats:
+            if not pattern.match(port):
+                continue
+            portstats = {}
+            portstats["tx_l1_bps"] = stats[port]['tx_l1_bps']
+            portstats["tx_l2_bps"] = stats[port]['tx_l2_bps']
+            portstats["tx_pps"] = stats[port]['tx_pps']
+            portstats["rx_l1_bps"] = stats[port]['rx_l1_bps']
+            portstats["rx_l2_bps"] = stats[port]['rx_l2_bps']
+            portstats["rx_pps"] = stats[port]['rx_pps']
+            portstats["rx_latency_minimum"] = stats[port]['rx_latency_minimum']
+            portstats["rx_latency_maximum"] = stats[port]['rx_latency_maximum']
+            portstats["rx_latency_average"] = stats[port]['rx_latency_average']
+
+            result_schema = ResultSchema()
+            results = result_schema.load(portstats)
+            result[port] = results
+            print(result_schema)
+    except:
         # return default value when something happens
-    #    result = {}#rpc_pb2.Result()
-    result_dict_schema = ResultDictSchema()
-    output = result_dict_schema.load(result)
-    return jsonify(output)
+        result = {}
+
+    return jsonify(result)
+
 
 @app.route('/trafficgen/stop', methods=['GET'])
 def stop_trafficgen():
@@ -150,7 +165,9 @@ def start_trafficgen():
     if checkIfProcessRunning("binary-search"):
         if not killProcessByName("binary-search"):
             return jsonify(False)
-    if not bool(request_data["l3"]):
+    start_schema = StartSchema()
+    result = start_schema.load(request_data)
+    if not result.l3:
         subprocess.Popen(["./binary-search.py", "--traffic-generator=trex-txrx",
                         "--device-pairs=%s" % request_data["device_pairs"],
                         "--search-runtime=%d" % request_data["search_runtime"],
