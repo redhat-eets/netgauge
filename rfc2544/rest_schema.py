@@ -37,69 +37,43 @@ class StartSchema(Schema):
         required=True, error_messages={"required": "device_pairs is required."}
     )
     search_runtime = fields.Int(
-        required=True,
-        error_messages={"required": "search_runtime is required."},
-        data_key="search-runtime",
+        required=True, error_messages={"required": "search_runtime is required."}
     )
     validation_runtime = fields.Int(
-        required=True,
-        error_messages={"required": "validation_runtime is required."},
-        data_key="validation-runtime",
+        required=True, error_messages={"required": "validation_runtime is required."}
     )
     num_flows = fields.Int(
-        required=True,
-        error_messages={"required": "num_flows is required."},
-        data_key="num-flows",
+        required=True, error_messages={"required": "num_flows is required."}
     )
     frame_size = fields.Int(
-        required=True,
-        error_messages={"required": "frame_size is required."},
-        data_key="frame-size",
+        required=True, error_messages={"required": "frame_size is required."}
     )
     max_loss_pct = fields.Float(
-        required=True,
-        error_messages={"required": "max_loss_pct is required."},
-        data_key="max-loss_pct",
+        required=True, error_messages={"required": "max_loss_pct is required."}
     )
     sniff_runtime = fields.Int(
-        required=True,
-        error_messages={"required": "sniff_runtime is required."},
-        data_key="sniff-runtime",
+        required=True, error_messages={"required": "sniff_runtime is required."}
     )
     search_granularity = fields.Float(
-        required=True,
-        error_messages={"required": "search_granularity is required."},
-        data_key="search-granularity",
+        required=True, error_messages={"required": "search_granularity is required."}
     )
-    active_device_pairs = fields.String(required=False, data_key="active_device_pairs")
-    traffic_direction = fields.String(required=False, data_key="traffic_direction")
-    rate_tolerance_failure = fields.String(
-        required=False, data_key="rate_tolerance_failure"
-    )
-    duplicate_packet_failure = fields.String(
-        required=False, data_key="duplicate_packet_failure"
-    )
-    negative_packet_loss = fields.String(
-        required=False, data_key="negative_packet_loss"
-    )
-    send_teaching_warmup = fields.Boolean(
-        required=False, data_key="send_teaching_warmup"
-    )
-    teaching_warmup_packet_type = fields.String(
-        required=False, data_key="teaching_warmup_packet_type"
-    )
-    teaching_warmup_packet_rate = fields.Int(
-        required=False, data_key="teaching_warmup_packet_rate"
-    )
-    use_src_ip_flows = fields.Boolean(required=False, data_key="use_src_ip_flows")
-    use_dst_ip_flows = fields.Boolean(required=False, data_key="use_dst_ip_flows")
-    use_src_mac_flows = fields.Boolean(required=False, data_key="use_src_mac_flows")
-    use_dst_mac_flows = fields.Boolean(required=False, data_key="use_dst_mac_flows")
-    rate_unit = fields.String(required=False, data_key="rate_unit")
-    rate = fields.Int(required=False, data_key="rate")
-    one_shot = fields.Int(required=False, data_key="one_shot")
-    rate_tolerance = fields.Int(required=False, data_key="rate_tolerance")
-    runtime_tolerance = fields.Int(required=False, data_key="runtime_tolerance")
+    active_device_pairs = fields.String(required=False)
+    traffic_direction = fields.String(required=False)
+    rate_tolerance_failure = fields.String(required=False)
+    duplicate_packet_failure = fields.String(required=False)
+    negative_packet_loss = fields.String(required=False)
+    send_teaching_warmup = fields.Boolean(required=False)
+    teaching_warmup_packet_type = fields.String(required=False)
+    teaching_warmup_packet_rate = fields.Int(required=False)
+    use_src_ip_flows = fields.Boolean(required=False)
+    use_dst_ip_flows = fields.Boolean(required=False)
+    use_src_mac_flows = fields.Boolean(required=False)
+    use_dst_mac_flows = fields.Boolean(required=False)
+    rate_unit = fields.String(required=False)
+    rate = fields.Int(required=False)
+    one_shot = fields.Int(required=False)
+    rate_tolerance = fields.Int(required=False)
+    runtime_tolerance = fields.Int(required=False)
     binary_search_extra_args = fields.List(fields.String(), required=False)
 
 

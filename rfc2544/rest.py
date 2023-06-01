@@ -120,7 +120,9 @@ class RestApi:
                 "use_dst_mac_flows",
             ]:
                 binary_search_command.append(
-                    field.replace("_", "-") + "=" + str(int(result[field] == True))  # noqa: E712
+                    field.replace("_", "-")
+                    + "="
+                    + str(int(result[field] == True))  # noqa: E712
                 )
             elif field == "binary_search_extra_args":
                 binary_search_command.append(result[field])
