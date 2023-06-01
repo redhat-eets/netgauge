@@ -19,7 +19,6 @@ import re
 from rest_schema import ResultSchema, StartSchema, StartSchemal3, PortSchema
 import subprocess
 import sys
-from waitress import serve
 
 sys.path.append("/opt/trex/current/automation/trex_control_plane/interactive")
 from trex.stl.api import *  # noqa: E402, F403
@@ -106,49 +105,32 @@ class RestApi:
                 return jsonify(False)
         start_schema = StartSchema()
         result = start_schema.load(request_data)
-        if not result["l3"]:
-            subprocess.Popen(
-                [
-                    "./binary-search.py",
-                    "--traffic-generator=trex-txrx",
-                    "--device-pairs=%s" % result["device_pairs"],
-                    "--search-runtime=%d" % result["search_runtime"],
-                    "--validation-runtime=%d" % result["validation_runtime"],
-                    "--num-flows=%d" % result["num_flows"],
-                    "--frame-size=%d" % result["frame_size"],
-                    "--max-loss-pct=%f" % result["max_loss_pct"],
-                    "--sniff-runtime=%d" % result["sniff_runtime"],
-                    "--search-granularity=%f" % result["search_granularity"],
-                    "--rate-tolerance=50",
-                    "--runtime-tolerance=50",
-                    "--negative-packet-loss=fail",
-                    "--rate-tolerance-failure=fail",
-                ]
-                + result["binary_search_extra_args"]
-            )
-        else:
-            start_schema_l3 = StartSchemal3()
-            result = start_schema_l3.load(request_data)
-            subprocess.Popen(
-                [
-                    "./binary-search.py",
-                    "--traffic-generator=trex-txrx",
-                    "--device-pairs=%s" % result["device_pairs"],
-                    "--dst-macs=%s" % result["dst_macs"],
-                    "--search-runtime=%d" % result["search_runtime"],
-                    "--validation-runtime=%d" % result["validation_runtime"],
-                    "--num-flows=%d" % result["num_flows"],
-                    "--frame-size=%d" % result["frame_size"],
-                    "--max-loss-pct=%f" % result["max_loss_pct"],
-                    "--sniff-runtime=%d" % result["sniff_runtime"],
-                    "--rate-tolerance=50",
-                    "--runtime-tolerance=50",
-                    "--negative-packet-loss=fail",
-                    "--search-granularity=%f" % result["search_granularity"],
-                    "--rate-tolerance-failure=fail",
-                ]
-                + result["binary_search_extra_args"]
-            )
+        if result["l3"]:
+            start_schema = StartSchemal3()
+            result = start_schema.load(request_data)
+
+        binary_search_command = ["./binary-search.py", "--traffic-generator=trex-txrx"]
+        for field in result:
+            if field == "send_teaching_warmup":
+                binary_search_command.append(field.replace("_", "-"))
+            elif field in [
+                "use_src_ip_flows",
+                "use_dst_ip_flows",
+                "use_src_mac_flows",
+                "use_dst_mac_flows",
+            ]:
+                binary_search_command.append(
+                    field.replace("_", "-") + "=" + str(int(result[field] == True))  # noqa: E712
+                )
+            elif field == "binary_search_extra_args":
+                binary_search_command.append(result[field])
+            else:
+                binary_search_command.append(
+                    field.replace("_", "-") + "=" + str(result[field])
+                )
+
+        subprocess.Popen(binary_search_command)
+
         if checkIfProcessRunning("binary-search"):
             return jsonify(True)
         else:
@@ -244,4 +226,4 @@ class RestApi:
 
 
 def create_app():
-   return app
+    return app
