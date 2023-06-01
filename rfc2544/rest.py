@@ -112,7 +112,7 @@ class RestApi:
         binary_search_command = ["./binary-search.py", "--traffic-generator=trex-txrx"]
         for field in result:
             if field == "send_teaching_warmup":
-                binary_search_command.append(field.replace("_", "-"))
+                binary_search_command.append("--" + field.replace("_", "-"))
             elif field in [
                 "use_src_ip_flows",
                 "use_dst_ip_flows",
@@ -120,17 +120,21 @@ class RestApi:
                 "use_dst_mac_flows",
             ]:
                 binary_search_command.append(
-                    field.replace("_", "-")
+                    "--"
+                    + field.replace("_", "-")
                     + "="
                     + str(int(result[field] == True))  # noqa: E712
                 )
             elif field == "binary_search_extra_args":
-                binary_search_command.append(result[field])
+                for extra_arg in result[field]:
+                    binary_search_command.append(result[field][extra_arg])
+            elif field == "l3":
+                pass
             else:
                 binary_search_command.append(
-                    field.replace("_", "-") + "=" + str(result[field])
+                    "--" + field.replace("_", "-") + "=" + str(result[field])
                 )
-
+        print(binary_search_command)
         subprocess.Popen(binary_search_command)
 
         if checkIfProcessRunning("binary-search"):
