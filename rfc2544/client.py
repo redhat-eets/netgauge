@@ -4,7 +4,7 @@ import argparse
 import requests
 
 def actionGetResult(args):
-    response = requests.get('http://' + args.server_addr + ":" + args.server_port + "/result")
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/result")
     if not response.isResultAvailable:
         print("test result not avalable.")
         return
@@ -30,21 +30,21 @@ def actionStartTrafficgen(args):
         'rate_tolerance_failure': args.rate_tolerance_failure,
         'binary_search_extra_args': [],
     }
-    response = requests.post('http://' + args.server_addr + ":" + args.server_port + "/trafficgen/start", json=json_data)
+    response = requests.post('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/start", json=json_data)
     print("start trafficgen: %s" % ("success" if response.success else "fail"))
 
 def actionStopTrafficgen(args):
-    response = requests.get('http://' + args.server_addr + ":" + args.server_port + "/trafficgen/stop")
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/stop")
     print("stop trafficgen: %s" % ("success" if response.success else "fail"))
 
 def actionStatus(args):
-    response = requests.get('http://' + args.server_addr + ":" + args.server_port + "/trafficgen/running")
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/running")
     print("trafficgen is currently %s running" %("" if response.isTrafficgenRunning else "not"))
-    response = requests.get('http://' + args.server_addr + ":" + args.server_port + "/result/available")
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/result/available")
     print("test result is avalable: %s" % ("yes" if response.isResultAvailable else "no"))
 
 def actionGetMac(args):
-    response = requests.get('http://' + args.server_addr + ":" + args.server_port + "/maclist")
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/maclist")
     print("This trafficgen mac list: %s" %(response.macList))
 
 def run(args):
