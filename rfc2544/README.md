@@ -23,6 +23,12 @@ In general using pysical function (PF) as the trafficgen ports can have better t
 
 ## Podman run example for manual test
 
+Ensure that for a background run the `CMD` field of the Dockerfile is properly set to `start`:
+```
+CMD ["/root/trafficgen_entry.sh", "start"]
+```
+
+Run the trafficgen
 `podman run -it --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 docker.io/cscojianzhan/trafficgen`
 
 Running the trafficgen on the PF of Intel E810 NIC requires an extra mount on /lib/firmware,
@@ -48,7 +54,7 @@ Ensure that for a background run the `CMD` field of the Dockerfile is properly s
 CMD ["/root/trafficgen_entry.sh", "server"]
 ```
 
-Build the new container image, for example:
+Build the new container image, for example locally:
 ```
 podman build --tag trafficgen:trafficgen_server -f ./Dockerfile
 ```
@@ -71,14 +77,16 @@ There are several endpoints provided, allowing both query and control over the t
 
 The majority of endpoints accept GET requests. Only `/trafficgen/start` accepts POST, and will take a JSON object with required fields. There is serialization present, so consult `rest_schema.py`, along with examples below, for required fields and refer to the server logs for validation errors upon incorrect schema (likely showing on the client as a `500 Internal Server Error`).
 
+This is built using [Flask](https://github.com/pallets/flask/) as the REST API Framework, [marshmallow](https://github.com/marshmallow-code/marshmallow) for serialization, and [Waitress](https://github.com/Pylons/waitress) as the WSGI server.
+
 ### Check if the Trafficgen is running
-```curl -v http://[IP]:[PORT]/trafficgen/running```
+```curl -v http://[IP]:8080/trafficgen/running```
 
 Returns a boolean, true if running, false otherwise.
 
 ### Start the Trafficgen
 ```
-curl -X POST http://[IP]:[PORT]/trafficgen/start -H 'Content-Type: application/json' -d '{    
+curl -X POST http://[IP]:8080/trafficgen/start -H 'Content-Type: application/json' -d '{    
     "l3":false,
     "device_pairs":"0:1",
     "search_runtime": 10,
@@ -95,21 +103,21 @@ curl -X POST http://[IP]:[PORT]/trafficgen/start -H 'Content-Type: application/j
 Returns a boolean, true if successful, false otherwise.
 
 ### Stop the Trafficgen
-```curl -v http://[IP]:[PORT]/trafficgen/stop```
+```curl -v http://[IP]:8080/trafficgen/stop```
 
 Returns a boolean, true if successful, false otherwise.
 
 ### Check if results are available
-```curl -v http://[IP]:[PORT]/result/available```
+```curl -v http://[IP]:8080/result/available```
 
 Returns a boolean, true if available, false otherwise.
 
 ### Get results
-```curl -v http://[IP]:[PORT]/result```
+```curl -v http://[IP]:8080/result```
 
 Returns a dict, with results if available, empty otherwise.
 
 ### Get a list of MAC addresses
-```curl -v http://[IP]:[PORT]/maclist```
+```curl -v http://[IP]:8080/maclist```
 
 Returns a string of comma separated MACs if successful, an empty string otherwise.
