@@ -5,13 +5,13 @@ import requests
 
 def actionGetResult(args):
     response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/result")
-    if not response.isResultAvailable:
+    if not response.json():
         print("test result not avalable.")
         return
-    print("port %s rx_pps: %.2f" %(response.stats[0].port, response.stats[0].rx_pps))
-    print("port %s rx_latency_average: %.2f" %(response.stats[0].port, response.stats[0].rx_latency_average))
-    print("port %s rx_pps: %.2f" %(response.stats[1].port, response.stats[1].rx_pps))
-    print("port %s rx_latency_average: %.2f" %(response.stats[1].port, response.stats[1].rx_latency_average))
+    print(response.json())
+    for port in response.json():
+        print("port %s rx_pps: %.2f" %(port, response.json()[port]["rx_pps"]))
+        print("port %s rx_latency_average: %.2f" %(port, response.json()[port]["rx_latency_average"]))
 
 def actionStartTrafficgen(args):
     json_data = {
@@ -31,21 +31,21 @@ def actionStartTrafficgen(args):
         'binary_search_extra_args': [],
     }
     response = requests.post('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/start", json=json_data)
-    print("start trafficgen: %s" % ("success" if response.success else "fail"))
+    print("start trafficgen: %s" % ("success" if response.json() else "fail"))
 
 def actionStopTrafficgen(args):
     response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/stop")
-    print("stop trafficgen: %s" % ("success" if response.success else "fail"))
+    print("stop trafficgen: %s" % ("success" if response.json() else "fail"))
 
 def actionStatus(args):
     response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/running")
-    print("trafficgen is currently %s running" %("" if response.isTrafficgenRunning else "not"))
+    print("trafficgen is currently%s running" %("" if response.json() else " not"))
     response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/result/available")
-    print("test result is avalable: %s" % ("yes" if response.isResultAvailable else "no"))
+    print("test result is avalable: %s" % ("yes" if response.json() else "no"))
 
 def actionGetMac(args):
     response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/maclist")
-    print("This trafficgen mac list: %s" %(response.macList))
+    print("This trafficgen mac list: %s" %(response.json()))
 
 def run(args):
     if args.action == "start":
