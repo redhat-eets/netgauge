@@ -1,7 +1,7 @@
 
 # RFC2544 Performance Test Trafficgen 
 
-RFC2544 performance test is commonly used to evaluate a system's performance when running DPDK workloads.
+RFC2544 performance testing is commonly used to evaluate a system's performance when running DPDK workloads.
 
 The container image build from this directory can be used for either automation or manual RFC2544 tests.
 
@@ -15,7 +15,7 @@ The container image build from this directory can be used for either automation 
 
 To achieve higher traffic rate, the two trafficgen ports should come from different NICs.
 
-In general using pysical function (PF) as the trafficgen ports can have better throughput performance than using the virtual function (VF). Building the container image based on TREX version 2.88 is recommended; the only exception is to use VF on Intel E810 nic as the trafficgen ports - in this case, building the container image based on TREX version 3.02 is recommended.   
+In general using pysical function (PF) as the trafficgen ports can have better throughput performance than using the virtual function (VF). Building the container image based on TRex version 2.88 is recommended; the only exception is to use VF on Intel E810 nic as the trafficgen ports - in this case, building the container image based on TRex version 3.02 is recommended.   
 
 ## Openshift integration demo
 
@@ -38,15 +38,29 @@ How to install the DDP packet can be found in Intel's E810 DDP package release n
 
 If using VF on the E810 as the trafficgen ports, then the extra mount for the DDP package is not required.
 
-The trex version also make a different on E810. With the 2.88 trex version, the E810 PF works but VF does not; with 3.02 trex version, the E810 VF works but PF does not.
+The TRex version also make a different on E810. With the 2.88 TRex version, the E810 PF works but VF does not; with 3.02 TRex version, the E810 VF works but PF does not.
  
 ## Podman run example for automation
+The trafficgen and REST API can be run in pod in the background. And example follows.
 
+Ensure that for a background run the `CMD` field of the Dockerfile is properly set to `server`:
 ```
-# start pod with port mapping
-podman pod create -p 50051:50051 -n trafficgen
-# start trex server in this pod
-podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 --pod trafficgen -e pci_list=0000:03:00.0,0000:03:00.1  docker.io/cscojianzhan/trafficgen /root/trafficgen_entry.sh server
+CMD ["/root/trafficgen_entry.sh", "server"]
+```
+
+Build the new container image, for example:
+```
+podman build --tag trafficgen:trafficgen_server -f ./Dockerfile
+```
+
+Start the pod with port mapping (8080 for our WSGI server) and a static IP (if desired):
+```
+podman pod create -p 8080:8080 --ip=10.88.0.88 -n trafficgen
+```
+
+Start the TRex server in the above pod using the container image we built:
+```
+podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen:trafficgen_server
 ```
 
 ## Trafficgen REST API
