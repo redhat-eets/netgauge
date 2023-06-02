@@ -127,7 +127,9 @@ class RestApi:
                 )
             elif field == "binary_search_extra_args":
                 for extra_arg in result[field]:
-                    binary_search_command.append(result[field][extra_arg])
+                    if extra_arg[0:2] != "--":
+                        extra_arg = "--" + extra_arg
+                    binary_search_command.append(extra_arg)
             elif field == "l3":
                 pass
             else:
