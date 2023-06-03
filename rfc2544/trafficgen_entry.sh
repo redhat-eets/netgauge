@@ -9,17 +9,10 @@ flows=${flows:-1024}
 frame_size=${frame_size:-64}
 rate=${rate:-25}
 steady_rate=${steady_rate:-0}
-page_prefix=trafficgen_trex_
-pciDeviceDir="/sys/bus/pci/devices"
-pciDriverDir="/sys/bus/pci/drivers"
-
+page_prefix="rfc2544_trex"
+vf_extra_opt=${vf_extra_opt:-"--no-promisc"}
+trex_extra_opt=${trex_extra_opt:-""}   # for mlx use "--mlx5-so"
 pciArray=()
-#track if each pci already bound to dpdk for recover purpose
-declare -A dpdkBound
-vendor="0x8086"
-device=""
-kmod="i40e"
-vf_extra_opt=""
 
 function convert_number_range() {
     # converts a range of cpus, like "1-3,5" to a list, like "1,2,3,5"
@@ -39,46 +32,6 @@ function convert_number_range() {
     echo "${cpus_list}"
 }
 
-function bindKmod() {
-    local pci=$1
-    vendor=$(cat ${pciDeviceDir}/${pci}/vendor)
-    device=$(cat ${pciDeviceDir}/${pci}/device)
-    if [[ ${vendor} == "0x8086" ]]; then
-        kmod="i40e"
-	if [[ "${device}" == "0x154c" ]]; then
-	    kmod="iavf"
-	fi
-    else
-        echo "no kernel module defined for ${pci}"
-        exit 1
-    fi
-    if [[ ! -d ${pciDeviceDir}/${pci}/net ]]; then
-        dpdk-devbind -u ${pci}
-        dpdk-devbind -b ${kmod} ${pci}
-        echo "${pci} bound to kernel"
-    fi
-}
-
-function bindDpdk() {
-    local pci=$1
-    vendor=$(cat ${pciDeviceDir}/${pci}/vendor)
-    device=$(cat ${pciDeviceDir}/${pci}/device)
-    if [[ -e ${pciDeviceDir}/${pci}/net ]]; then
-        if [[ ${vendor} == "0x8086" ]]; then
-            kmod="i40e"
-	    if [[ "${device}" == "0x154c" ]]; then
-                kmod="iavf"
-	    fi
-	else
-            echo "no kernel module defined for ${pci}"
-            exit 1
-	fi
-	echo ${pci} > ${pciDriverDir}/${kmod}/unbind
-    fi
-    echo "${vendor} ${device}" > ${pciDriverDir}/vfio-pci/new_id
-    echo "${vendor} ${device}" > ${pciDriverDir}/vfio-pci/remove_id
-}
-
 function sigfunc() {
     pid=`pgrep binary-search`
     [ -z ${pid} ] || kill ${pid}
@@ -91,8 +44,6 @@ function sigfunc() {
     rm -rf /dev/hugepages/${page_prefix}*
     exit 0
 }
-
-modprobe vfio-pci
 
 trap sigfunc SIGTERM SIGINT SIGUSR1
 
@@ -112,20 +63,6 @@ else
             fi
         fi
 
-        for pci in $(echo ${pci_list} | sed -e 's/,/ /g'); do
-            if [[ ${pci} != 0000:* ]]; then
-                pci=0000:${pci}
-            fi
-            pciArray+=(${pci})
-            vendor=$(cat ${pciDeviceDir}/${pci}/vendor)
-            device=$(cat ${pciDeviceDir}/${pci}/device)
-            if [[ ! -e ${pciDeviceDir}/${pci}/net ]]; then
-                dpdkBound["$pci"]=1
-            else
-                dpdkBound["$pci"]=0
-            fi
-        done
-
         # how many devices?
         number_of_devices=$(echo ${pci_list} | sed -e 's/,/ /g' | wc -w)
         if [ ${number_of_devices} -lt 2 ]; then
@@ -142,7 +79,7 @@ else
             fi
             ((index+=2))
         done
-        # only twp peer mac address can be specified as gateway, if >2 pci slot is supplied, then fall back to io mode even and ignore the peer mac address 
+        # only two peer mac address can be specified as gateway, if >2 pci slot is supplied, then fall back to io mode even and ignore the peer mac address 
         if ((index > 2)); then
             l3=0
         elif [[ -z "${peer_mac_west}" || -z "${peer_mac_east}" ]]; then
@@ -172,18 +109,6 @@ else
     envsubst < trex_cfg.yaml.tmpl > ${yaml_file}
 
     pushd /opt/trex/current
-    trex_extra_opt=""
-    if [[ "${vendor}" == "0x8086" ]]; then
-	if [[ "${device}" == "0x154c" || "${device}" == "0x1889" ]]; then
-	    #vf_extra_opt="--no-promisc --use-device-stats"
-	    vf_extra_opt="--no-promisc"
-	fi
-    elif [[ "${vendor}" == "0x15b3" ]]; then
-        if [[ "${device}" == "0x1018" ]]; then
-            vf_extra_opt="--no-promisc"
-        fi
-        trex_extra_opt="--mlx5-so"
-    fi
 
     rm -rf /dev/hugepages/${page_prefix}*
     trex_server_cmd="./t-rex-64 -i -c ${workerCPUs} --no-ofed-check --checksum-offload --cfg ${yaml_file} --iom 0 -v 4 --prefix ${page_prefix} ${trex_extra_opt}"
@@ -241,12 +166,7 @@ else
 fi
 
 tmux kill-session -t trex 2>/dev/null
-for pci in "${pciArray[@]}"; do
-    if (( ${dpdkBound[$pci]} == 0 )); then
-        bindKmod ${pci}
-    fi
-    rm -rf /dev/hugepages/${page_prefix}*
-done
+rm -rf /dev/hugepages/${page_prefix}*
  
 exit 0
 
