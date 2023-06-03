@@ -1,79 +1,66 @@
 from __future__ import print_function
 import logging
-import grpc
-import rpc_pb2
-import rpc_pb2_grpc
-import time
 import argparse
-import re
+import requests
 
-def actionGetResult(stub):
-    response = stub.isResultAvailable(rpc_pb2.IsResultAvailableParams())
-    if not response.isResultAvailable:
+def actionGetResult(args):
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/result")
+    if not response.json():
         print("test result not avalable.")
         return
-    response = stub.getResult(rpc_pb2.GetResultParams())
-    print("port %s rx_pps: %.2f" %(response.stats[0].port, response.stats[0].rx_pps))
-    print("port %s rx_latency_average: %.2f" %(response.stats[0].port, response.stats[0].rx_latency_average))
-    print("port %s rx_pps: %.2f" %(response.stats[1].port, response.stats[1].rx_pps))
-    print("port %s rx_latency_average: %.2f" %(response.stats[1].port, response.stats[1].rx_latency_average))
+    print(response.json())
+    for port in response.json():
+        print("port %s rx_pps: %.2f" %(port, response.json()[port]["rx_pps"]))
+        print("port %s rx_latency_average: %.2f" %(port, response.json()[port]["rx_latency_average"]))
 
-def actionStartTrafficgen(args, stub):
-    response = stub.startTrafficgen(rpc_pb2.BinarySearchParams(
-            search_runtime=args.search_runtime,
-            validation_runtime=args.validation_runtime,
-            num_flows=args.num_flows,
-            device_pairs=args.device_pairs,
-            frame_size=args.frame_size,
-            max_loss_pct=args.max_loss_pct,
-            sniff_runtime=args.sniff_runtime,
-            search_granularity=args.search_granularity,
-            l3=l3,
-            dst_macs=args.dst_macs
-            ))
-    print("start trafficgen: %s" % ("success" if response.success else "fail"))
+def actionStartTrafficgen(args):
+    json_data = {
+        'l3': l3,
+        'device_pairs': args.device_pairs,
+        'search_runtime': args.search_runtime,
+        'validation_runtime': args.validation_runtime,
+        'num_flows': args.num_flows,
+        'frame_size': args.frame_size,
+        'max_loss_pct': args.max_loss_pct,
+        'sniff_runtime': args.sniff_runtime,
+        'search_granularity': args.search_granularity,
+        'rate_tolerance': args.rate_tolerance,
+        'runtime_tolerance': args.runtime_tolerance,
+        'negative_packet_loss': args.negative_packet_loss,
+        'rate_tolerance_failure': args.rate_tolerance_failure,
+        'binary_search_extra_args': [],
+    }
+    response = requests.post('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/start", json=json_data)
+    print("start trafficgen: %s" % ("success" if response.json() else "fail"))
 
-def actionStopTrafficgen(stub):
-    response = stub.stopTrafficgen(rpc_pb2.StopTrafficgenParams())
-    print("stop trafficgen: %s" % ("success" if response.success else "fail"))
+def actionStopTrafficgen(args):
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/stop")
+    print("stop trafficgen: %s" % ("success" if response.json() else "fail"))
 
-def actionStatus(stub):
-    response = stub.isTrafficgenRunning(rpc_pb2.IsTrafficgenRunningParams())
-    print("trafficgen is currently %s running" %("" if response.isTrafficgenRunning else "not"))
-    response = stub.isResultAvailable(rpc_pb2.IsResultAvailableParams())
-    print("test result is avalable: %s" % ("yes" if response.isResultAvailable else "no"))
+def actionStatus(args):
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/trafficgen/running")
+    print("trafficgen is currently%s running" %("" if response.json() else " not"))
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/result/available")
+    print("test result is avalable: %s" % ("yes" if response.json() else "no"))
 
-def actionGetMac(stub):
-    response = stub.getMacList(rpc_pb2.GetMacListParams())
-    print("This trafficgen mac list: %s" %(response.macList))
+def actionGetMac(args):
+    response = requests.get('http://' + args.server_addr + ":" + str(args.server_port) + "/maclist")
+    print("This trafficgen mac list: %s" %(response.json()))
 
 def run(args):
-    with grpc.insecure_channel("%s:%d" % (args.server_addr, args.server_port)) as channel:
-        stub = rpc_pb2_grpc.TrafficgenStub(channel)
-        if args.action == "start":
-            actionStartTrafficgen(args, stub)
-        elif args.action == "stop":
-            actionStopTrafficgen(stub)
-        elif args.action == "status":
-            actionStatus(stub)
-        elif args.action == "get-result":
-            actionGetResult(stub)
-        elif args.action == "get-mac":
-            actionGetMac(stub)
-        else:
-            print("invalid action: %s" %(args.action))
+    if args.action == "start":
+        actionStartTrafficgen(args)
+    elif args.action == "stop":
+        actionStopTrafficgen(args)
+    elif args.action == "status":
+        actionStatus(args)
+    elif args.action == "get-result":
+        actionGetResult(args)
+    elif args.action == "get-mac":
+        actionGetMac(args)
+    else:
+        print("invalid action: %s" %(args.action))
 
-class DstMacsParse(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        for x in values.split(','):
-            if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", x.lower()):
-                continue
-            else:
-                parser.error('%s needs to be comma seperated mac addresses' %(option_string))
-                return
-        global l3
-        l3 = True
-        namespace.dst_macs = values
 
 if __name__ == '__main__':
     global l3
@@ -128,26 +115,43 @@ if __name__ == '__main__':
     parser.add_argument('--server-addr',
                         dest='server_addr',
                         help='trafficgen server address',
-                        default='localhost'
+                        required=True
                         )
     parser.add_argument('--server-port',
                         dest='server_port',
                         help='trafficgen server port',
-                        default=50051,
-                        type = int
-                        )
-    parser.add_argument('--dst-macs',
-                        help='comma seperated l3 gw mac address',
-                        dest='dst_macs',
-                        default=None,
-                        type = str,
-                        action=DstMacsParse
+                        type = int,
+                        required=True
                         )
     parser.add_argument('--search-granularity',
                         dest="search_granularity",
                         default=5.0,
                         type = float,
                         help="the search granularity in percent of throughput"
+                        )
+    parser.add_argument('--rate-tolerance',
+                        dest="rate_tolerance",
+                        default=50,
+                        type = int,
+                        help="the rate tolerance"
+                        )
+    parser.add_argument('--runtime-tolerance',
+                        dest="runtime_tolerance",
+                        default=50,
+                        type = int,
+                        help="the runtime tolerance"
+                        )
+    parser.add_argument('--negative-packet-loss',
+                        dest="negative_packet_loss",
+                        default='fail',
+                        type = str,
+                        help="negative packet loss"
+                        )
+    parser.add_argument('--rate-tolerance-failure',
+                        dest="rate_tolerance_failure",
+                        default='fail',
+                        type = str,
+                        help="rate tolerance failure"
                         )
     args = parser.parse_args()
     run(args)

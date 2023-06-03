@@ -1,7 +1,7 @@
 
 # RFC2544 Performance Test Trafficgen 
 
-RFC2544 performance test is commonly used to evaluate a system's performance when running DPDK workloads.
+RFC2544 performance testing is commonly used to evaluate a system's performance when running DPDK workloads.
 
 The container image build from this directory can be used for either automation or manual RFC2544 tests.
 
@@ -15,7 +15,7 @@ The container image build from this directory can be used for either automation 
 
 To achieve higher traffic rate, the two trafficgen ports should come from different NICs.
 
-In general using pysical function (PF) as the trafficgen ports can have better throughput performance than using the virtual function (VF). Building the container image based on TREX version 2.88 is recommended; the only exception is to use VF on Intel E810 nic as the trafficgen ports - in this case, building the container image based on TREX version 3.02 is recommended.   
+In general using pysical function (PF) as the trafficgen ports can have better throughput performance than using the virtual function (VF). Building the container image based on TRex version 2.88 is recommended; the only exception is to use VF on Intel E810 nic as the trafficgen ports - in this case, building the container image based on TRex version 3.02 is recommended.   
 
 ## Openshift integration demo
 
@@ -23,6 +23,12 @@ In general using pysical function (PF) as the trafficgen ports can have better t
 
 ## Podman run example for manual test
 
+Ensure that for a background run the `CMD` field of the Dockerfile is properly set to `start`:
+```
+CMD ["/root/trafficgen_entry.sh", "start"]
+```
+
+Run the trafficgen
 `podman run -it --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 docker.io/cscojianzhan/trafficgen`
 
 Running the trafficgen on the PF of Intel E810 NIC requires an extra mount on /lib/firmware,
@@ -38,38 +44,80 @@ How to install the DDP packet can be found in Intel's E810 DDP package release n
 
 If using VF on the E810 as the trafficgen ports, then the extra mount for the DDP package is not required.
 
-The trex version also make a different on E810. With the 2.88 trex version, the E810 PF works but VF does not; with 3.02 trex version, the E810 VF works but PF does not.
+The TRex version also make a different on E810. With the 2.88 TRex version, the E810 PF works but VF does not; with 3.02 TRex version, the E810 VF works but PF does not.
  
 ## Podman run example for automation
+The trafficgen and REST API can be run in pod in the background. And example follows.
 
+Ensure that for a background run the `CMD` field of the Dockerfile is properly set to `server`:
 ```
-# start pod with port mapping
-podman pod create -p 50051:50051 -n trafficgen
-# start trex server in this pod
-podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 --pod trafficgen -e pci_list=0000:03:00.0,0000:03:00.1  docker.io/cscojianzhan/trafficgen /root/trafficgen_entry.sh server
+CMD ["/root/trafficgen_entry.sh", "server"]
 ```
 
-In the automation script, start the trafficgen,
-`python client.py start`
+Build the new container image, for example locally:
+```
+podman build --tag trafficgen:trafficgen_server -f ./Dockerfile
+```
 
-To check the trafficgen status,
-`python client.py status`
+Start the pod with port mapping (8080 for our WSGI server) and a static IP (if desired):
+```
+podman pod create -p 8080:8080 --ip=10.88.0.88 -n trafficgen
+```
 
-To get the test result,
-`python client.py get-result`
+Start the TRex server in the above pod using the container image we built:
+```
+podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen:trafficgen_server
+```
 
-To get the mac address of trafficgen test ports,
-`python client.py get-mac`
+## Trafficgen REST API
 
-## trafficgen client in other languages
+The trafficgen and REST API are programmed with Python. The REST API allows one to control the trafficgen.
 
-The trafficgen and client is programmed with Python. The trafficgen provides gRPC 
-interface so other programming languages can be used to control the trafficgen 
-over gRPC.
+There are several endpoints provided, allowing both query and control over the trafficgen. Below are examples using curl, but the same can be done programmatically. For more information on implementation see `rest_schema.py` and `rest.py`.
 
-The protocol buffer is defined in rpc.proto. When there is an update to this file, to 
-re-generate python code,
-`python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. rpc.proto`
+The majority of endpoints accept GET requests. Only `/trafficgen/start` accepts POST, and will take a JSON object with required fields. There is serialization present, so consult `rest_schema.py`, along with examples below, for required fields and refer to the server logs for validation errors upon incorrect schema (likely showing on the client as a `500 Internal Server Error`).
 
-Other language have their own tool for code generation.
+This is built using [Flask](https://github.com/pallets/flask/) as the REST API Framework, [marshmallow](https://github.com/marshmallow-code/marshmallow) for serialization, and [Waitress](https://github.com/Pylons/waitress) as the WSGI server.
 
+### Check if the Trafficgen is running
+```curl -v http://[IP]:8080/trafficgen/running```
+
+Returns a boolean, true if running, false otherwise.
+
+### Start the Trafficgen
+```
+curl -X POST http://[IP]:8080/trafficgen/start -H 'Content-Type: application/json' -d '{    
+    "l3":false,
+    "device_pairs":"0:1",
+    "search_runtime": 10,
+    "validation_runtime":30,
+    "num_flows":1,
+    "frame_size":64,
+    "max_loss_pct":0.002,
+    "sniff_runtime":3,
+    "search_granularity":5.0,
+    "binary_search_extra_args":[]
+}'
+```
+
+Returns a boolean, true if successful, false otherwise.
+
+### Stop the Trafficgen
+```curl -v http://[IP]:8080/trafficgen/stop```
+
+Returns a boolean, true if successful, false otherwise.
+
+### Check if results are available
+```curl -v http://[IP]:8080/result/available```
+
+Returns a boolean, true if available, false otherwise.
+
+### Get results
+```curl -v http://[IP]:8080/result```
+
+Returns a dict, with results if available, empty otherwise.
+
+### Get a list of MAC addresses
+```curl -v http://[IP]:8080/maclist```
+
+Returns a string of comma separated MACs if successful, an empty string otherwise.
