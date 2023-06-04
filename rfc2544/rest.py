@@ -111,8 +111,12 @@ class RestApi:
 
         binary_search_command = ["./binary-search.py", "--traffic-generator=trex-txrx"]
         for field in result:
-            if field == "send_teaching_warmup":
-                binary_search_command.append("--" + field.replace("_", "-"))
+            if field in [
+                "send_teaching_warmup",
+                "no_promisc",
+            ]:
+                if result[field] == True:
+                    binary_search_command.append("--" + field.replace("_", "-"))
             elif field in [
                 "use_src_ip_flows",
                 "use_dst_ip_flows",

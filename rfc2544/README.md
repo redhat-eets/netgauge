@@ -33,6 +33,15 @@ To build with a different TREX_VERSION, say for the purpose of running it on the
 podman build -t localhost/trafficgen --build-arg TREX_VERSION=3.02 .
 ```
 
+## Bind trafficgen port to vfio-pci
+
+Before running the trafficgen container, the trafficgen ports need to be bound to vfio-pci first. Assume the RPM package `dpdk-tools` is pre-installed on the system, and `dpdk-devbind.py` is available with this RPM install. Here is the steps to bind the ports to the vfio-pci,
+```
+modprobe vfio-pci
+dpdk-devbind.py -u <port1_pci> <port2_pci>
+dpdk-devbind.py -b vfio-pci <port1_pci> <port2_pci>
+```
+
 ## Podman run example for manual test
 
 First, identify the numa node associated with the NIC pic slot,
@@ -44,12 +53,12 @@ Select a cpuset on this numa node.
 
 For manual test, users normally do not use pod, but run the trafficgen container directly,
 ```
-podman run -it --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen /root/trafficgen_entry.sh start
+podman run -it --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen start
 ```
 
 Running the trafficgen on the PF of Intel E810 NIC requires an extra mount on /lib/firmware,
 ```
-podman run -it --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules -v /lib/firmware:/lib/firmware --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 trafficgen /root/trafficgen_entry.sh start
+podman run -it --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules -v /lib/firmware:/lib/firmware --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen start
 ```
 
 The default DDP package is required to be installed under /lib/firmware for the above to work,
@@ -75,12 +84,12 @@ podman pod create -p 8080:8080 --ip=10.88.0.88 -n trafficgen
 
 Start the TRex server in the above pod using the container image we built:
 ```
-podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
 ```
 
 If users do not want to emulate the pod, they may choose to directly start the trafficgen container without using a pod,
 ```
-podman run -d --rm --privileged -v /dev:/dev -v /sys:/sys -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
 ```
 
 ## Trafficgen REST API
@@ -99,6 +108,7 @@ This is built using [Flask](https://github.com/pallets/flask/) as the REST API F
 Returns a boolean, true if running, false otherwise.
 
 ### Start the Trafficgen
+
 ```
 curl -X POST http://localhost:8080/trafficgen/start -H 'Content-Type: application/json' -d '{
     "l3":false,
@@ -117,7 +127,11 @@ curl -X POST http://localhost:8080/trafficgen/start -H 'Content-Type: applicatio
     "use_src_mac_flows":0,
     "use_dst_mac_flows":0,
     "send_teaching_warmup": true,
-    "binary_search_extra_args":["no-promisc"]
+    "rate_tolerance": 10,
+    "runtime_tolerance": 10,
+    "rate": 50,
+    "rate_unit": "%",
+    "no_promisc": true
 }'
 ```
 
