@@ -25,8 +25,6 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && tar xzf ${TREX_VER}.tar.gz -C /opt/trex && ln -sf /opt/trex/${TREX_VER} /opt/trex/current \
        && rm -f ${TREX_VER}.tar.gz \
        && rm -f /opt/trex/$TREX_VER/trex_client_$TREX_VER.tar.gz \
-       && curl -L -k -o /root/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_x86_64 \
-       && chmod +x /root/dumb-init \
        && microdnf -y clean all --enablerepo='*'
 COPY rest.py rest_schema.py trex_cfg.yaml.tmpl /root/tgen/
 RUN pushd /root/tgen && popd
@@ -35,5 +33,5 @@ RUN chmod 777 /root/trafficgen_entry.sh /root/tgen/binary-search.py /root/tgen/t
        && ln -f -s /bin/python3 /bin/python \
        && ln -f -s /usr/bin/python3 /usr/bin/python
 
-ENTRYPOINT ["/root/dumb-init", "--"]
-CMD ["/root/trafficgen_entry.sh", "server"]
+ENTRYPOINT ["/root/trafficgen_entry.sh"]
+CMD ["server"]

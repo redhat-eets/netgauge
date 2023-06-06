@@ -74,6 +74,7 @@ class StartSchema(Schema):
     one_shot = fields.Int(required=False)
     rate_tolerance = fields.Int(required=False)
     runtime_tolerance = fields.Int(required=False)
+    no_promisc = fields.Boolean(required=False)
     binary_search_extra_args = fields.List(fields.String(), required=False)
 
 
