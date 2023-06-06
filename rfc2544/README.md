@@ -50,7 +50,7 @@ cat /sys/bus/pci/devices/<pci_address>/numa_node
 ```
 
 Note: the two trafficgen ports should be associated with the same numa node, otherwise the trafficgen won't work.
- 
+
 Next, select a cpuset from this numa node. For example, if the trafficgen ports are associated with numa node 1, then take a look of the cpu list on this numa node,
 ```
 # lscpu | grep node1
@@ -63,7 +63,7 @@ Also note the isolated cpu list,
 4-19
 ```
 
-If the isolated cpu list from the above command is empty, then [go to the prerequisites](#Prerequisites) to fix it.
+If the isolated cpu list from the above command is empty, then [follow the prerequisites section](#Prerequisites) to fix it.
 
 Select 5 cores from the isolated cpu list and make sure the selected cores are from numa node 1. For example, here "5,7,9,11,13" could be used.
 
@@ -87,7 +87,7 @@ How to install the DDP packet can be found in Intel's E810 DDP package release n
 
 If using VF on the E810 as the trafficgen ports, then the extra volume mount of `/lib/firmware` for the DDP package is not required.
 
-Note: the TRex version makes a different on E810. With the 2.88 TRex version, the E810 PF works but VF does not; with 3.02 TRex version, the E810 VF works but PF does not.
+Note: the TRex version makes a difference on E810. With the 2.88 TRex version, the E810 PF works but VF does not; with 3.02 TRex version, the E810 VF works but PF does not.
 
 ## Podman run example for automation
 
