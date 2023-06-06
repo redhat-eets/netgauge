@@ -11,7 +11,7 @@ The container image build from this directory can be used for either automation 
 + in BIOS, enable VT (cpu virtualization technology)
 + intel_iommu in kernel argument
 + Example kargs: `default_hugepagesz=1G hugepagesz=1G hugepages=8 intel_iommu=on iommu=pt isolcpus=4-11`
-+ two trafficgen ports pre-bound to vfio-pci driver.
++ two trafficgen ports are located on the same numa node and pre-bound to the vfio-pci driver.
 
 To achieve higher traffic rate, the two trafficgen ports should come from different NICs.
 
@@ -44,34 +44,50 @@ dpdk-devbind.py -b vfio-pci <port1_pci> <port2_pci>
 
 ## Podman run example for manual test
 
-First, identify the numa node associated with the NIC pic slot,
+First, identify the numa node associated with the trafficgen port PCI slot,
 ```
 cat /sys/bus/pci/devices/<pci_address>/numa_node
 ```
 
-Select a cpuset on this numa node.
+Note: the two trafficgen ports should be associated with the same numa node, otherwise the trafficgen won't work.
+ 
+Next, select a cpuset from this numa node. For example, if the trafficgen ports are associated with numa node 1, then take a look of the cpu list on this numa node,
+```
+# lscpu | grep node1
+NUMA node1 CPU(s):   1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79
+```
+
+Also note the isolated cpu list,
+```
+# cat /sys/devices/system/cpu/isolated
+4-19
+```
+
+If the isolated cpu list from the above command is empty, then [go to the prerequisites](#Prerequisites) to fix it.
+
+Select 5 cores from the isolated cpu list and make sure the selected cores are from numa node 1. For example, here "5,7,9,11,13" could be used.
 
 For manual test, users normally do not use pod, but run the trafficgen container directly,
 ```
-podman run -it --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen start
+podman run -it --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 5,7,9,11,13 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen start
 ```
 
-Running the trafficgen on the PF of Intel E810 NIC requires an extra mount on /lib/firmware,
+Running the trafficgen on the PF of Intel E810 NIC requires an extra volume mount on `/lib/firmware`,
 ```
-podman run -it --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules -v /lib/firmware:/lib/firmware --cpuset-cpus 4-11 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen start
+podman run -it --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules -v /lib/firmware:/lib/firmware --cpuset-cpus 5,7,9,11,13 -e pci_list=0000:03:00.0,0000:03:00.1 localhost/trafficgen start
 ```
 
-The default DDP package is required to be installed under /lib/firmware for the above to work,
+The default DDP package is required to be installed under `/lib/firmware` for the above to work,
 ```
-# ls ls /lib/firmware/intel/ice/ddp
+# ls /lib/firmware/intel/ice/ddp
 ice.pkg
 ```
 
 How to install the DDP packet can be found in Intel's E810 DDP package release note.
 
-If using VF on the E810 as the trafficgen ports, then the extra mount for the DDP package is not required.
+If using VF on the E810 as the trafficgen ports, then the extra volume mount of `/lib/firmware` for the DDP package is not required.
 
-The TRex version makes a different on E810. With the 2.88 TRex version, the E810 PF works but VF does not; with 3.02 TRex version, the E810 VF works but PF does not.
+Note: the TRex version makes a different on E810. With the 2.88 TRex version, the E810 PF works but VF does not; with 3.02 TRex version, the E810 VF works but PF does not.
 
 ## Podman run example for automation
 
@@ -84,13 +100,15 @@ podman pod create -p 8080:8080 --ip=10.88.0.88 -n trafficgen
 
 Start the TRex server in the above pod using the container image we built:
 ```
-podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
 ```
 
 If users do not want to emulate the pod, they may choose to directly start the trafficgen container without using a pod,
 ```
-podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
 ```
+
+Note: in the above example, the cpuset is from numa node 0. This is because the trafficgen ports used in this example are associated with numa node 0.
 
 ## Trafficgen REST API
 
