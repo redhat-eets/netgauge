@@ -3,25 +3,27 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-	"path/filepath"
-	"os"
 
 	expect "github.com/google/goexpect"
-	"github.com/lithammer/shortuuid"
+	"k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
 
 const (
 	startTimeout = 60 * time.Second
 	cmdTimeout   = 1 * time.Second
+	stopTimeout  = 10 * time.Second
 	// page size in Mbyte per port
 	pageSizePerPort = 1024
 )
 
 var (
 	promptRE = regexp.MustCompile(`testpmd>`)
+	stopRE   = regexp.MustCompile(`Bye...`)
 )
 
 type testpmd struct {
@@ -33,27 +35,29 @@ type testpmd struct {
 
 var pTestpmd *testpmd
 
-func (t *testpmd) init(pci pciArray, queues int, ring int, testpmdPath string) error {
+func (t *testpmd) init(cset cpuset.CPUSet, main_lcore int, pci pciArray, queues int,
+	ring int, testpmdPath string) error {
 	ports := len(pci)
 	nPmd := ports * queues
 	// one extra core for mgmt in addition to the pmd
 	nCores := nPmd + 1
-	cset := getProcCpuset()
 	if nCores > cset.Size() {
 		log.Fatal("insufficient cores!")
 	}
-	clist := intToString(cset.ToSlice()[:nCores], ",")
-	t.filePrefix = shortuuid.New()
+	clist := intToString(cset.List()[:nCores], ",")
+	//t.filePrefix = shortuuid.New()
+	// For network observability, specific app name should be used
+	t.filePrefix = "testpmd"
 	// setup socket-mem based on pci numa node
 	memNode0, memNode1 := 0, 0
 	for _, p := range pci {
 		if numa, err := getNumaNode(p); err == nil {
 			if numa == 0 {
-				memNode0 += 1024
+				memNode0 += 2048
 			} else if numa == 1 {
-				memNode1 += 1024
+				memNode1 += 2048
 			} else {
-				return fmt.Errorf("Only numa 0,1 are expected but numa %d is detected on pci %s", numa, p)
+				log.Fatalf("Only numa 0,1 are expected but numa %d is detected on pci %s", numa, p)
 			}
 		} else {
 			return err
@@ -61,17 +65,18 @@ func (t *testpmd) init(pci pciArray, queues int, ring int, testpmdPath string) e
 	}
 	cmd := fmt.Sprintf("%s --socket-mem %d,%d -n 4 --proc-type auto", testpmdPath, memNode0, memNode1)
 	cmd = fmt.Sprintf("%s -l %s", cmd, clist)
+	cmd = fmt.Sprintf("%s --main-lcore=%d", cmd, main_lcore)
 	// use a unique file-prefix
 	cmd = fmt.Sprintf("%s --file-prefix %s", cmd, t.filePrefix)
 	// add each pci address
 	for _, p := range pci {
-		cmd = fmt.Sprintf("%s -w %s", cmd, p)
+		cmd = fmt.Sprintf("%s -a %s", cmd, p)
 	}
 	// this has to go first before the rest
 	cmd = fmt.Sprintf("%s -- -i", cmd)
 	cmd = fmt.Sprintf("%s --nb-cores=%d", cmd, nPmd)
 	cmd = fmt.Sprintf("%s --nb-ports=%d", cmd, ports)
-	cmd = fmt.Sprintf("%s --portmask=%s", cmd, portMask(ports))
+	//cmd = fmt.Sprintf("%s --portmask=%s", cmd, portMask(ports))
 	cmd = fmt.Sprintf("%s --rxq=%d", cmd, queues)
 	cmd = fmt.Sprintf("%s --txq=%d", cmd, queues)
 	cmd = fmt.Sprintf("%s --rxd=%d", cmd, ring)
@@ -89,8 +94,11 @@ func (t *testpmd) init(pci pciArray, queues int, ring int, testpmdPath string) e
 }
 
 func (t *testpmd) stop() error {
+	t.e.Send("quit\n")
+	output, _, err := t.e.Expect(stopRE, stopTimeout)
+	log.Println(output)
 	t.e.Close()
-	return nil
+	return err
 }
 
 func (t *testpmd) runCmd(cmd string) (string, error) {
@@ -175,13 +183,13 @@ func (t *testpmd) clearFwdInfo() (string, error) {
 func (t *testpmd) releaseHugePages() error {
 	files, err := filepath.Glob(fmt.Sprintf("/dev/hugepages/%s*", t.filePrefix))
 	if err != nil {
-    		return err
+		return err
 	}
 
 	for _, f := range files {
-	    	if err := os.Remove(f); err != nil {
-        		return err
-    		}
+		if err := os.Remove(f); err != nil {
+			return err
+		}
 	}
 	return nil
 }
