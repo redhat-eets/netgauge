@@ -53,9 +53,9 @@ func (t *testpmd) init(cset cpuset.CPUSet, main_lcore int, pci pciArray, queues 
 	for _, p := range pci {
 		if numa, err := getNumaNode(p); err == nil {
 			if numa == 0 {
-				memNode0 += 2048
+				memNode0 += pageSizePerPort
 			} else if numa == 1 {
-				memNode1 += 2048
+				memNode1 += pageSizePerPort
 			} else {
 				log.Fatalf("Only numa 0,1 are expected but numa %d is detected on pci %s", numa, p)
 			}
@@ -122,6 +122,7 @@ func (t *testpmd) setFwdMode(mode string) error {
 		return err
 	}
 	t.running = true
+	t.fwdMode = mode
 	return nil
 }
 

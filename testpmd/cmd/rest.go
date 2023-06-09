@@ -7,13 +7,16 @@ import (
 )
 
 type testpmd_status struct {
-	Status string `json:"status"`
+	FwdMode    string `json:"mode"`
+	Running    bool   `json:"running"`
+	FilePrefix string `json:"name"`
 }
 
 func setup_rest_endpoint(router *gin.Engine) {
-	router.GET("/status", getStatus)
+	router.GET("/testpmd/status", getTestpmdStatus)
 }
 
-func getStatus(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, testpmd_status{Status: "ok"})
+func getTestpmdStatus(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, testpmd_status{FwdMode: pTestpmd.fwdMode,
+		Running: pTestpmd.running, FilePrefix: pTestpmd.filePrefix})
 }

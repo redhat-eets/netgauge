@@ -33,6 +33,7 @@ func TestSchedSetaffinity(t *testing.T) {
 }
 
 func TestRestAPI(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	router.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Welcome Gin Server")
@@ -53,8 +54,14 @@ func TestRestAPI(t *testing.T) {
 		done <- 1
 	}()
 
+	go func() {
+		time.Sleep(1 * time.Second)
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	}()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, os.Interrupt, syscall.SIGTERM)
+
 	<-sigs
 	log.Println("Shutdown Server ...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
