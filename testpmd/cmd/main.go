@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -86,8 +87,10 @@ func main() {
 	done := make(chan int)
 	router := gin.Default()
 	setup_rest_endpoint(router)
+	addr := ":" + strconv.Itoa(*httpPort)
+	fmt.Printf("Addr: %s\n", addr)
 	srv := &http.Server{
-		Addr:    ":" + string(*httpPort),
+		Addr:    addr,
 		Handler: router,
 	}
 	go func() {
