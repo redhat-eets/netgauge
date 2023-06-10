@@ -160,7 +160,7 @@ func (t *testpmd) getMacAddress(pci string) (string, error) {
 	return "", fmt.Errorf("couldn't get mac address for pci slot %s", pci)
 }
 
-func (t *testpmd) setPeerMac(portNum int32, peerMac string) error {
+func (t *testpmd) setPeerMac(portNum int, peerMac string) error {
 	if t.running {
 		if _, err := t.runCmd("stop"); err != nil {
 			return err
