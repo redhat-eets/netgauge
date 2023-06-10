@@ -41,7 +41,6 @@ func main() {
 	var pci pciArray
 	flag.Var(&pci, "pci", "pci address, can specify multiple times")
 	testpmdPath := flag.String("testpmd-path", "testpmd", "if not in PATH, specify the testpmd location")
-	dpdkDriver := flag.String("dpdk-driver", "vfio-pci", "dpdk driver")
 	flag.Parse()
 	// if pci not specified on CLI, try enviroment vars
 	if len(pci) == 0 {
@@ -56,11 +55,6 @@ func main() {
 	// if still have no pci info, then exit
 	if len(pci) == 0 {
 		log.Fatalf("pci address not provided\n")
-	}
-
-	pciRecord := make(map[string]*pciInfo)
-	if err := setupDpdkPorts(*dpdkDriver, pci, pciRecord); err != nil {
-		log.Fatal(err)
 	}
 
 	cset := getProcCpuset()
@@ -85,6 +79,7 @@ func main() {
 	}
 
 	done := make(chan int)
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	setup_rest_endpoint(router)
 	addr := ":" + strconv.Itoa(*httpPort)
@@ -116,9 +111,7 @@ func main() {
 	case <-done:
 		log.Println("rest server finished.")
 	}
-	pTestpmd.stop()
-	if err := restoreKernalPorts(pci, pciRecord); err != nil {
-		log.Fatal(err)
-	}
+	pTestpmd.terminate()
+
 	pTestpmd.releaseHugePages()
 }

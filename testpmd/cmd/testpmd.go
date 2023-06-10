@@ -93,7 +93,7 @@ func (t *testpmd) init(cset cpuset.CPUSet, main_lcore int, pci pciArray, queues 
 	return nil
 }
 
-func (t *testpmd) stop() error {
+func (t *testpmd) terminate() error {
 	t.e.Send("quit\n")
 	output, _, err := t.e.Expect(stopRE, stopTimeout)
 	log.Println(output)
@@ -108,12 +108,19 @@ func (t *testpmd) runCmd(cmd string) (string, error) {
 	return output, err
 }
 
-func (t *testpmd) setFwdMode(mode string) error {
+func (t *testpmd) stop() error {
 	if t.running {
 		if _, err := t.runCmd("stop"); err != nil {
 			return err
 		}
 		t.running = false
+	}
+	return nil
+}
+
+func (t *testpmd) setFwdMode(mode string) error {
+	if err := t.stop(); err != nil {
+		return err
 	}
 	if _, err := t.runCmd("set fwd " + mode); err != nil {
 		return err
