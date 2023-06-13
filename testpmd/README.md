@@ -1,55 +1,130 @@
 
-# Stand-alone-testpmd
+# Testpmd with REST API
 
-Testpmd is commonly used in DPDK performance test.
-It makes sense to have the testpmd seperated from the common tool set container and have its own 
-container image. This allows us to quickly add new capabilities to the testpmd without 
-worrying the update impact to other tools in the common tool set container.
+Intel DPDK sample application testpmd is commonly used in DPDK performance test.
+
+In this repository, a wrapper REST API is added to the testpmd, so that the testpmd can be remotely started/stopped/queried.
 
 ## Prerequisites:
 + 2MB or 1GB huge pages
 + isolated CPU for better performance
 + in BIOS, enable VT (cpu virtualization technology)
-+ intel_iommu in kernel argument
++ iommu enabled
 + Example kargs: `default_hugepagesz=1G hugepagesz=1G hugepages=8 intel_iommu=on iommu=pt isolcpus=4-11`
++ two testpmd ports are located on the same numa node and pre-bound to the vfio-pci driver
 
-## Openshift integration demo
+To achieve higher traffic rate, the two testpmd ports should come from different NICs.
 
-[![Watch the video](https://img.youtube.com/vi/C5s9DZC3D6c/hqdefault.jpg)](https://youtu.be/C5s9DZC3D6c)
+## Build the container image
+
+To build the container image:
+```
+podman build -t testpmd:22.11.2 .
+```
+
+This image size is around 175M bytes.
+
+The DPDK version can be changed by using `build-arg` build option, for example, so build 21.11.2,
+```
+podman build -t testpmd:21.11.2 --build-arg VER=21.11.2 .
+```
+
+To further reduce this container image size, one may choose to build the image based on the ubi-micro,
+```
+podman build -t testpmd-micro:22.11.2 -f Dockerfile-micro
+```
+
+This generate an image size of 87M bytes.
+
+`Dockerfile-micro` has dependencies on the versions of the libs used by the testpmd. This file might need to be updated with the `ubi-micro` version or DPDK version. The one in this repositry proves to work with DPDK version 22.11.2 and ubi-micro 9.1. 
+
+## Bind testpmd ports to vfio-pci
+
+Before running the testpmd container, the ports used by testpmd need to bind to vfio-pci. On a RHEL/Fedora system, one can install the RPM package `dpdk-tools` and then use `dpdk-devbind.py` to do the driver bind. Or simply use a DPDK container to do the job,
+```
+podman pull docker.io/patrickkutch/dpdk:v21.11.2
+alias devbind="podman run --rm -it --privileged -v /sys/bus/pci/devices:/sys/bus/pci/devices  docker.io/patrickkutch/dpdk:v21.11.2 dpdk-devbind.py"
+modprobe vfio-pci
+devbind -u <port1_pci> <port2_pci>
+devbind -b vfio-pci <port1_pci> <port2_pci>
+```
 
 ## Podman run example
 
-### start testpmd server 
+The wrapper can start the testpmd in two ways,
+* auto start the testpmd
+* accept client requst to start the testpmd
 
-`podman run -it --rm --privileged -p 9000:9000 -v /sys:/sys -v /dev:/dev -v /lib/modules:/lib/modules --cpuset-cpus 5,7,9,11 docker.io/cscojianzhan/testpmd /root/testpmd-wrapper -pci 86:00:0 -pci 86:00:1`
+### Auto start the testpmd 
 
-### control testpmd from a client
+A typical auto start example,
 
-The sample client can be used to control the testpmd. The client can be on the same machine as the testpmd server or remotely. 
-If running the client remotely, option -server is used to specify the testpmd server address, -grpc-port is used to specify
-the server grpc port (by default 9000 is used).
+```
+podman run -it --rm --privileged -p 9000:9000 -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/firmware:/lib/firmware --cpuset-cpus 4,6,8 quay.io/jianzzha/testpmd-micro:22.11.2 -pci 0000:51:00.0 -pci 0000:51:00.1 -http-port 9000 -auto
+```
 
-To start the testpmd IO forwarding (so the testpmd simulate a L2 switch),
-`client-example io`
+This automally put the testpmd in the `io` forwarding mode. This forwarding mode normally provides the highest packet throughput number.
 
-To start the testpmd MAC forwarding (so the testpmd simulate a L3 gateway),
-`client-example -peer-mac 0,<port0-peer-mac> -peer-mac 1,<port1-peer-mac> mac`
+In the above example, the cpuset `4,6,8` is selected from the numa node 0, because the testpmd ports 0000:51:00.0 and 0000:51:00.1 are located on the numa node 0, here is how to find out which numa node the pci slot is associated with,
+```
+# cat /sys/bus/pci/devices/0000:51:00.0/numa_node
+0
+```
 
-To start the testpmd icmp mode (so it response to ping),
-`client-example icmp`
+Next, take a look of the isolated cpu list,
+```
+# cat /sys/devices/system/cpu/isolated
+4,6,8,10,12,14,16,18
+```
 
-To list the testpmd ports ,
-`client-example ports`
+Select 3 cores from the above list and make sure they are on the same numa node as the testpmd ports. For example, to see which CPUs belongs to numa node 0,
+```
+# cat /sys/devices/system/node/node0/cpulist
+0-63
+```
 
-## testpmd client in other languages
+If the testpmd ports are physical functions (PFs) from Intel E810, then the volume mount on `/lib/firmware` is required regardless Intel DDP is to be used; otherwise this volume mount is not necessary.
 
-The testpmd server and client is programmed with golang. The testpmd server provides gRPC 
-interface so other programming languages can be used to control the testpmd 
-over gRPC.
 
-The protocol buffer is defined in rpc.proto. When there is an update to this file, to 
-re-generate golang code,
-`cd rpc; protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative rpc.proto`
+### Control testpmd from a REST client
 
-Other language have their own tool for code generation.
+To start the testpmd and wait for client request,
+```
+podman run -it --rm --privileged -p 9000:9000 -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/firmware:/lib/firmware --cpuset-cpus 4,6,8 quay.io/jianzzha/testpmd-micro:22.11.2 -pci 0000:51:00.0 -pci 0000:51:00.1 -http-port 9000
+```
+
+A REST client can send request to the testpmd container to start/stop the testpmd or query for the status.
+
+For example, to start the testpmd in `io` forwarding mode,
+```
+# curl -X POST localhost:9000/testpmd/start -H 'Content-Type: application/json' -d '{"mode":"io","macs":[]}'
+{
+    "mode": "io",
+    "running": true,
+    "name": "testpmd"
+}
+```
+
+In the above example, the json attribute "macs" is empty for `io` mode but this field is required.
+
+To examine the testpmd status,
+```
+# curl localhost:9000/testpmd/status
+{
+    "mode": "io",
+    "running": true,
+    "name": "testpmd"
+}
+```
+
+To stop the testpmd from forwarding,
+```
+curl -X POST localhost:9000/testpmd/stop
+{
+    "mode": "io",
+    "running": false,
+    "name": "testpmd"
+}
+```
+
 
