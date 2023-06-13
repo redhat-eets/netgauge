@@ -174,3 +174,35 @@ Returns a dict, with results if available, empty otherwise.
 ```curl -v http://[IP]:8080/maclist```
 
 Returns a string of comma separated MACs if successful, an empty string otherwise.
+
+## Trafficgen REST API Client
+
+The trafficgen REST API features `client.py` that can be used to interface with the trafficgen utilizing the API. Various modes exist for the client, outlined below, which can take either CLI arguments or use the default values present in the code. A mode is required to run the client, and all of the modes have two required arguments: `server-addr` and `server-port` corresponding to the running trafficgen server.
+
+### start
+
+The start mode starts the trafficgen running. It utilizes the `/trafficgen/start` endpoint.
+
+### stop
+
+The stop mode stops the trafficgen from running. It utilizes the `trafficgen/stop` endpoint.
+
+### status
+
+The status mode gets the status of the trafficgen and report file. It utilizes the `trafficgen/running` and `result/available` endpoints.
+
+### get-result
+
+The get-result mode gets the result file. It utilizes the `/result` endpoint.
+
+### get-mac
+
+The get-mac mode gets the MAC address list. It utilizes the `/maclist` endpoint.
+
+### auto
+
+The auto mode will automatically run the test, checking for results, and printing the json report to stdout. This allows for further parsing, and bypasses other print statements (except for error handling), allowing for automation. 
+
+This mode will run with all default values if no other arguments are set. However, please note that the `timeout` is specific to auto mode and should be adjusted if timeouts are observed. This mode also allows for bypassing the majority of the CLI arguments when `config` is set. This will look for a JSON formatted config file which contains the arguments one wishes to override. The example template, `auto_client.yaml.tmpl`, sets the `timeout` and `max_loss_pct` fields to non-default values.
+
+Upon successful run auto mode should return a single line to stdout: the result JSON.
