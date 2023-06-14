@@ -1,8 +1,6 @@
-FROM ubi8-minimal
+FROM docker.io/python:3.12-rc-alpine3.17
 USER root
 
-RUN microdnf -y --setopt=tsflags=nodocs install python3 && \
-    microdnf -y clean all --enablerepo='*'
 COPY dpdk-port-stats.py /usr/bin/dpdk-port-stats.py
 RUN chmod 0755 /usr/bin/dpdk-port-stats.py
 ENTRYPOINT ["/usr/bin/dpdk-port-stats.py"]
