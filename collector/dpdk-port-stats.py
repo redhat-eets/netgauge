@@ -26,37 +26,27 @@ def human_readable(value: float) -> str:
     return f"{value:.0f}{unit}"
 
 
-def wait_for_socket_connection(sock_path):
-    connected = False
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-    while not connected:
-        try:
-            sock.connect(sock_path)
-            print(f"Socket successfully connected to {sock_path}")
-            connected = True
-
-        except ConnectionRefusedError:
-            print(f"Connection refused. Retrying in 5 seconds...")
-            time.sleep(5)
-
-        except Exception as e:
-            if isinstance(e, FileNotFoundError):
-                e = f"{sock_path}: {e}"
-            print(f"error: {e}")
-            break
-    return sock
-
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
+    # Create mutually exclusive group for the options
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "-s",
         "--sock-path",
-        default="/var/run/dpdk/rte/dpdk_telemetry.v2",
         help="""
-        Path to the DPDK telemetry UNIX socket.
+        Path to the DPDK telemetry UNIX socket,
+        Can't be used with --file-prefix.
+        """,
+    )
+    group.add_argument(
+        "-p",
+        "--file-prefix",
+        help="""
+        Socket path: /var/run/dpdk/<file-prefix>/dpdk_telemetry.v2,
+        Can't be used with --sock-path.
         """,
     )
     parser.add_argument(
@@ -70,6 +60,14 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.sock_path:
+        sock_path = args.sock_path
+    elif args.file_prefix:
+        sock_path = "/var/run/dpdk/" + args.file_prefix + "/dpdk_telemetry.v2"
+    else:
+        print("Please specify --file-prefix or --sock-path")
+        raise SystemExit
+
     sock = None
     terminate = False
     connection_retry = False
@@ -81,8 +79,8 @@ def main():
                 time.sleep(5)
                 connection_retry = False
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-            sock.connect(args.sock_path)
-            print(f"Socket successfully connected to {args.sock_path}")
+            sock.connect(sock_path)
+            print(f"Socket successfully connected to {sock_path}")
             data = json.loads(sock.recv(1024).decode())
             max_out_len = data["max_output_len"]
     
@@ -126,7 +124,7 @@ def main():
             connection_retry = True
         except Exception as e:
             if isinstance(e, FileNotFoundError):
-                e = f"{args.sock_path}: {e}"
+                e = f"{sock_path}: {e}"
             print(f"error: {e}")
         finally:
             if sock is not None:
