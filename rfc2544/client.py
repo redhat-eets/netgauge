@@ -284,94 +284,82 @@ if __name__ == "__main__":
     parser.add_argument(
         "--active-device-pairs",
         dest="active_device_pairs",
-        default=None,
         type=str,
         help="active device pairs",
     )
     parser.add_argument(
         "--traffic-direction",
         dest="traffic_direction",
-        default=None,
         type=str,
         help="traffic direction",
     )
     parser.add_argument(
         "--duplicate-packet-failure",
         dest="duplicate_packet_failure",
-        default=None,
         type=str,
         help="duplicate packet failure",
     )
     parser.add_argument(
         "--send-teaching-warmup",
         dest="send_teaching_warmup",
-        default=None,
         type=bool,
         help="send teaching warmup",
     )
     parser.add_argument(
         "--teaching-warmup-packet-type",
         dest="teaching_warmup_packet_type",
-        default=None,
         type=str,
         help="teaching warmup packet type",
     )
     parser.add_argument(
         "--teaching-warmup-packet-rate",
         dest="teaching_warmup_packet_rate",
-        default=None,
         type=int,
         help="teaching warmup packet rate",
     )
     parser.add_argument(
         "--use-src-ip-flows",
         dest="use_src_ip_flows",
-        default=None,
         type=bool,
         help="use src ip flows",
     )
     parser.add_argument(
         "--use-dst-ip-flows",
         dest="use_dst_ip_flows",
-        default=None,
         type=bool,
         help="use dst ip flows",
     )
     parser.add_argument(
         "--use-src-mac-flows",
         dest="use_src_mac_flows",
-        default=None,
         type=bool,
         help="use src mac flows",
     )
     parser.add_argument(
         "--use-dst-mac-flows",
         dest="use_dst_mac_flows",
-        default=None,
         type=bool,
         help="use dst mac flows",
     )
     parser.add_argument(
-        "--rate-unit", dest="rate_unit", default=None, type=str, help="rate unit"
+        "--rate-unit", dest="rate_unit", type=str, help="rate unit"
     )
-    parser.add_argument("--rate", dest="rate", default=None, type=int, help="rate")
+    parser.add_argument("--rate", dest="rate", type=int, help="rate")
     parser.add_argument(
-        "--one-shot", dest="one_shot", default=None, type=int, help="one shot"
+        "--one-shot", dest="one_shot", type=int, help="one shot"
     )
     parser.add_argument(
         "--no-promisc",
         dest="no_promisc",
-        default=None,
         type=bool,
         help="no promiscuous mode",
     )
     parser.add_argument(
-        "--dst-macs", dest="dst_macs", default=None, type=str, help="dst macs"
+        "--dst-macs", dest="dst_macs", type=str, help="dst macs"
     )
     parser.add_argument(
         "--binary-search-extra-args",
         dest="binary_search_extra_args",
-        default=None,
         type=str,
         help="binary search extra args (list in string)",
     )
