@@ -10,5 +10,5 @@ RUN curl -L -o dpdk.tar.xz https://fast.dpdk.org/rel/dpdk-$VER.tar.xz && \
     cp -r dpdk*/* /opt/dpdk/ && \
     pushd /opt/dpdk && \ 
     rm -rf build && \
-    meson setup --default-library=static build && cd build && ninja && \
+    meson setup --default-library=static -Dplatform=generic build && cd build && ninja && \
     install -t /usr/local/bin app/dpdk-testpmd

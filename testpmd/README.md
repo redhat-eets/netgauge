@@ -1,7 +1,7 @@
 
 # Testpmd with REST API
 
-Intel DPDK sample application testpmd is commonly used in DPDK performance test.
+The Intel DPDK sample application [testpmd](https://doc.dpdk.org/guides/testpmd_app_ug/index.html) is commonly used on platform DPDK performance testing.
 
 In this repository, a wrapper REST API is added to the testpmd, so that the testpmd can be remotely started/stopped/queried.
 
@@ -17,6 +17,8 @@ To achieve higher traffic rate, the two testpmd ports should come from different
 
 ## Build the container image
 
+The container build process will download the DPDK tarball from http://core.dpdk.org/download/. By default it will download DPDK release 22.11.2.
+
 To build the container image:
 ```
 podman build -t testpmd:22.11.2 .
@@ -24,7 +26,7 @@ podman build -t testpmd:22.11.2 .
 
 This image size is around 175M bytes.
 
-The DPDK version can be changed by using `build-arg` build option, for example, so build 21.11.2,
+The DPDK version can be changed by using `build-arg` build option, for example build 21.11.2,
 ```
 podman build -t testpmd:21.11.2 --build-arg VER=21.11.2 .
 ```
@@ -34,13 +36,20 @@ To further reduce this container image size, one may choose to build the image b
 podman build -t testpmd-micro:22.11.2 -f Dockerfile-micro
 ```
 
-This generate an image size of 87M bytes.
+This generates an image size of 87M bytes.
 
 `Dockerfile-micro` has dependencies on the versions of the libs used by the testpmd. This file might need to be updated with the `ubi-micro` version or DPDK version. The one in this repositry proves to work with DPDK version 22.11.2 and ubi-micro 9.1. 
 
 ## Bind testpmd ports to vfio-pci
 
-Before running the testpmd container, the ports used by testpmd need to bind to vfio-pci. On a RHEL/Fedora system, one can install the RPM package `dpdk-tools` and then use `dpdk-devbind.py` to do the driver bind. Or simply use a DPDK container to do the job,
+Before running the testpmd container, the ports used by testpmd need to bind to vfio-pci. On a RHEL/Fedora system, one can install the RPM package `dpdk-tools` and then use `dpdk-devbind.py` to do the driver bind.
+```
+modprobe vfio-pci
+dpdk-devbind.py -u <port1_pci> <port2_pci>
+dpdk-devbind.py -b vfio-pci <port1_pci> <port2_pci>
+```
+
+Or simply use a DPDK container to do the job,
 ```
 podman pull docker.io/patrickkutch/dpdk:v21.11.2
 alias devbind="podman run --rm -it --privileged -v /sys/bus/pci/devices:/sys/bus/pci/devices  docker.io/patrickkutch/dpdk:v21.11.2 dpdk-devbind.py"
@@ -60,7 +69,7 @@ The wrapper can start the testpmd in two ways,
 A typical auto start example,
 
 ```
-podman run -it --rm --privileged -p 9000:9000 -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/firmware:/lib/firmware --cpuset-cpus 4,6,8 quay.io/jianzzha/testpmd-micro:22.11.2 -pci 0000:51:00.0 -pci 0000:51:00.1 -http-port 9000 -auto
+podman run -it --rm --privileged -p 9000:9000 -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/firmware:/lib/firmware --cpuset-cpus 4,6,8 testpmd-micro:22.11.2 --pci 0000:51:00.0 --pci 0000:51:00.1 --http-port 9000 --auto
 ```
 
 This automally put the testpmd in the `io` forwarding mode. This forwarding mode normally provides the highest packet throughput number.
@@ -83,14 +92,14 @@ Select 3 cores from the above list and make sure they are on the same numa node 
 0-63
 ```
 
-If the testpmd ports are physical functions (PFs) from Intel E810, then the volume mount on `/lib/firmware` is required regardless Intel DDP is to be used; otherwise this volume mount is not necessary.
+If the testpmd ports are physical functions (PFs) from Intel E810, then the volume mount on `/lib/firmware` is required regardless of if Intel DDP is to be used; otherwise this volume mount is not necessary.
 
 
 ### Control testpmd from a REST client
 
 To start the testpmd and wait for client request,
 ```
-podman run -it --rm --privileged -p 9000:9000 -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/firmware:/lib/firmware --cpuset-cpus 4,6,8 quay.io/jianzzha/testpmd-micro:22.11.2 -pci 0000:51:00.0 -pci 0000:51:00.1 -http-port 9000
+podman run -it --rm --privileged -p 9000:9000 -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/firmware:/lib/firmware --cpuset-cpus 4,6,8 testpmd-micro:22.11.2 --pci 0000:51:00.0 --pci 0000:51:00.1 --http-port 9000
 ```
 
 A REST client can send request to the testpmd container to start/stop the testpmd or query for the status.
@@ -126,5 +135,3 @@ curl -X POST localhost:9000/testpmd/stop
     "name": "testpmd"
 }
 ```
-
-

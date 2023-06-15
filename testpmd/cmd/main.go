@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -27,7 +26,6 @@ func (p *pciArray) Set(value string) error {
 	pci := normalizePci(value)
 	if _, err := os.Stat(pciDeviceDir + pci); os.IsNotExist(err) {
 		log.Fatalf("invalid pci %s", value)
-		return fmt.Errorf("invalid pci %s", value)
 	}
 	*p = append(*p, pci)
 	return nil
@@ -62,7 +60,7 @@ func main() {
 	var newMask unix.CPUSet
 	newMask.Set(mgmt_cpu)
 
-	// Setaffinity on current process
+	// setaffinity on current process
 	if err := unix.SchedSetaffinity(0, &newMask); err != nil {
 		log.Fatalf("SchedSetaffinity: %v", err)
 	}
@@ -83,7 +81,7 @@ func main() {
 	router := gin.Default()
 	setup_rest_endpoint(router)
 	addr := ":" + strconv.Itoa(*httpPort)
-	fmt.Printf("Addr: %s\n", addr)
+	log.Printf("server addr: %s\n", addr)
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: router,
@@ -99,11 +97,11 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, os.Interrupt, syscall.SIGTERM)
 	<-sigs
-	log.Println("Shutdown Server ...")
+	log.Println("shutdown server ...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		log.Fatal("server shutdown:", err)
 	}
 	select {
 	case <-ctx.Done():

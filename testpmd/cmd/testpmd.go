@@ -45,8 +45,7 @@ func (t *testpmd) init(cset cpuset.CPUSet, main_lcore int, pci pciArray, queues 
 		log.Fatal("insufficient cores!")
 	}
 	clist := intToString(cset.List()[:nCores], ",")
-	//t.filePrefix = shortuuid.New()
-	// For network observability, specific app name should be used
+	// for network observability, specific app name should be used
 	t.filePrefix = "testpmd"
 	// setup socket-mem based on pci numa node
 	memNode0, memNode1 := 0, 0
@@ -76,7 +75,6 @@ func (t *testpmd) init(cset cpuset.CPUSet, main_lcore int, pci pciArray, queues 
 	cmd = fmt.Sprintf("%s -- -i", cmd)
 	cmd = fmt.Sprintf("%s --nb-cores=%d", cmd, nPmd)
 	cmd = fmt.Sprintf("%s --nb-ports=%d", cmd, ports)
-	//cmd = fmt.Sprintf("%s --portmask=%s", cmd, portMask(ports))
 	cmd = fmt.Sprintf("%s --rxq=%d", cmd, queues)
 	cmd = fmt.Sprintf("%s --txq=%d", cmd, queues)
 	cmd = fmt.Sprintf("%s --rxd=%d", cmd, ring)
