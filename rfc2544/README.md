@@ -183,21 +183,62 @@ The trafficgen REST API features `client.py` that can be used to interface with 
 
 The start mode starts the trafficgen running. It utilizes the `/trafficgen/start` endpoint.
 
+Example run:
+
+```
+python3 client.py start --server-addr 10.88.0.88 --server-port 8080
+start trafficgen: success
+```
+
 ### stop
 
 The stop mode stops the trafficgen from running. It utilizes the `trafficgen/stop` endpoint.
+
+Example run:
+
+```
+python3 client.py stop --server-addr 10.88.0.88 --server-port 8080
+stop trafficgen: success
+```
 
 ### status
 
 The status mode gets the status of the trafficgen and report file. It utilizes the `trafficgen/running` and `result/available` endpoints.
 
+Example run:
+
+```
+python3 client.py status --server-addr 10.88.0.88 --server-port 8080
+trafficgen is currently not running
+test result is avalable: yes
+```
+
 ### get-result
 
 The get-result mode gets the result file. It utilizes the `/result` endpoint.
 
+Example run:
+
+```
+python3 client.py get-result --server-addr 10.88.0.88 --server-port 8080
+{'0': {'rx_l1_bps': 9992899070.524572, 'rx_l2_bps': 7137785050.374695, 'rx_latency_average': 171.0, 'rx_latency_maximum': 3725.0, 'rx_latency_minimum': 8.0, 'rx_pps': 14870385.521613948, 'tx_l1_bps': 9992899070.524572, 'tx_l2_bps': 7137785050.374695, 'tx_pps': 14870385.521613948}, '1': {'rx_l1_bps': 9992899070.524572, 'rx_l2_bps': 7137785050.374695, 'rx_latency_average': 172.0, 'rx_latency_maximum': 3725.0, 'rx_latency_minimum': 6.0, 'rx_pps': 14870385.521613948, 'tx_l1_bps': 9992899070.524572, 'tx_l2_bps': 7137785050.374695, 'tx_pps': 14870385.521613948}}
+port 0 rx_pps: 14870385.52
+port 0 rx_latency_average: 171.00
+port 1 rx_pps: 14870385.52
+port 1 rx_latency_average: 172.00
+
+```
+
 ### get-mac
 
 The get-mac mode gets the MAC address list. It utilizes the `/maclist` endpoint.
+
+Example run:
+
+```
+python3 client.py get-mac --server-addr 10.88.0.88 --server-port 8080
+This trafficgen mac list: 00:11:22:33:44:55,aa:bb:cc:ee:ff:00
+```
 
 ### auto
 
@@ -206,3 +247,10 @@ The auto mode will automatically run the test, checking for results, and printin
 This mode will run with all default values if no other arguments are set. However, please note that the `timeout` is specific to auto mode and should be adjusted if timeouts are observed. This mode also allows for bypassing the majority of the CLI arguments when `config` is set. This will look for a JSON formatted config file which contains the arguments one wishes to override. The example template, `auto_client.yaml.tmpl`, sets the `timeout` and `max_loss_pct` fields to non-default values.
 
 Upon successful run auto mode should return a single line to stdout: the result JSON.
+
+Example minimal run:
+
+```
+python3 client.py auto --server-addr 10.88.0.88 --server-port 8080
+{'0': {'rx_l1_bps': 9992899070.524572, 'rx_l2_bps': 7137785050.374695, 'rx_latency_average': 171.0, 'rx_latency_maximum': 3725.0, 'rx_latency_minimum': 8.0, 'rx_pps': 14870385.521613948, 'tx_l1_bps': 9992899070.524572, 'tx_l2_bps': 7137785050.374695, 'tx_pps': 14870385.521613948}, '1': {'rx_l1_bps': 9992899070.524572, 'rx_l2_bps': 7137785050.374695, 'rx_latency_average': 172.0, 'rx_latency_maximum': 3725.0, 'rx_latency_minimum': 6.0, 'rx_pps': 14870385.521613948, 'tx_l1_bps': 9992899070.524572, 'tx_l2_bps': 7137785050.374695, 'tx_pps': 14870385.521613948}}
+```
