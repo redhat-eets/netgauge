@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Display DPDK port statistics using the telemetry socket API.
+DPDK telemetry data over REST API
 """
 
 import argparse
@@ -14,15 +14,22 @@ from flask import (Flask, jsonify)
 
 app = Flask(__name__)
 
-rest_data = defaultdict(dict)
+rate_date = defaultdict(dict)
+sock_telemetry = None
 
-@app.route("/pps")
+@app.route("/ethdev/stats/rate")
 def pps():
-    return jsonify(rest_data["pps"])
+    return jsonify(rate_date["pps"])
 
-@app.route("/ethdev_stats")
+@app.route("/ethdev/stats")
 def ethdev_stats():
-    return jsonify(rest_data["ethdev_stats"])
+    sock_telemetry.connect_and_get("/ethdev/stats")
+    return jsonify(sock_telemetry.stats["/ethdev/stats"])
+
+@app.route("/ethdev/info")
+def ethdev_info():
+    sock_telemetry.connect_and_get("/ethdev/info")
+    return jsonify(sock_telemetry.stats["/ethdev/info"])
 
 def human_readable(value: float) -> str:
     units = ("K", "M", "G")
@@ -38,49 +45,72 @@ def human_readable(value: float) -> str:
         return f"{value:.1f}{unit}"
     return f"{value:.0f}{unit}"
 
-class ConsoleThread(threading.Thread):
+class DPDKTelemetry:
     def __init__(self, sock_path, period):
-        threading.Thread.__init__(self)
-        self.shutdown_flag = threading.Event()
         self.sock_path = sock_path
         self.period = period
         self.sock = None
         self.max_out_len = 0
-        self.stats = dict()
+        self.port_ids = []
+        self.stats = defaultdict(dict)
 
+    def connect_socket(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+        self.sock.connect(self.sock_path)
+        print(f"Socket successfully connected to {self.sock_path}")
+        data = json.loads(self.sock.recv(1024).decode())
+        self.max_out_len = data["max_output_len"]
+        self.port_ids = self.cmd("/ethdev/list")["/ethdev/list"]
+        
     def cmd(self, c):
         self.sock.send(c.encode())
         return json.loads(self.sock.recv(self.max_out_len))
     
-    def get_stats(self, port_ids):
-        all_stats = {}
-        for i in port_ids:
-            data = self.cmd(f"/ethdev/stats,{i}")
-            all_stats[i] = data["/ethdev/stats"]
-        rest_data["ethdev_stats"] = all_stats
-        return all_stats
-    
+    def assemble_url_from_all_ports(self, url):
+        assembled_info = {}
+        for i in self.port_ids:
+            data = self.cmd(f"{url},{i}")
+            assembled_info[i] = data[url]
+        return assembled_info
+            
+    def connect_and_get(self, url):
+        try:
+            self.connect_socket()
+            self.stats[url] = self.assemble_url_from_all_ports(url)
+        except Exception as e:
+            e = f"{self.sock_path}: {e}"
+            print(f"error: {e}")
+            self.stats = defaultdict(dict)
+        finally:
+            if self.sock is not None:
+                self.sock.close()
+                self.sock = None
+
+class ConsoleThread(DPDKTelemetry, threading.Thread):
+    def __init__(self, sock_path, period):
+        threading.Thread.__init__(self)
+        self.shutdown_flag = threading.Event()
+        super().__init__(sock_path, period)
+
     def run(self):
         print('Thread #%s started' % self.ident)
         terminate = False
         connection_retry = False
         while not self.shutdown_flag.is_set(): 
             try:
+                rate_date["pps"] = defaultdict(dict)
+                if self.sock is not None:
+                    self.sock.close()
+                    self.sock = None
                 if connection_retry:
                     print("Retry socket Connection in 1 second...")
                     time.sleep(1)
                     connection_retry = False
-                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-                self.sock.connect(self.sock_path)
-                print(f"Socket successfully connected to {self.sock_path}")
-                data = json.loads(self.sock.recv(1024).decode())
-                self.max_out_len = data["max_output_len"]
-                port_ids = self.cmd("/ethdev/list")["/ethdev/list"]
-                rest_data["pps"] = defaultdict(dict)
-                cur = self.get_stats(port_ids)
+                self.connect_socket()
+                cur = self.assemble_url_from_all_ports("/ethdev/stats")
                 while not self.shutdown_flag.is_set():
                     time.sleep(self.period)
-                    new = self.get_stats(port_ids)
+                    new = self.assemble_url_from_all_ports("/ethdev/stats")
                     print("---")
                     for i,stats in new.items():
                         rx = (stats["ipackets"] - cur[i]["ipackets"]) / self.period
@@ -88,7 +118,7 @@ class ConsoleThread(threading.Thread):
                         tx = (stats["opackets"] - cur[i]["opackets"]) / self.period
                         if rx == 0 and tx == 0 and drop == 0:
                             continue
-                        rest_data["pps"][i] = {"rx": rx, "drop": drop, "tx": tx}
+                        rate_date["pps"][i] = {"rx": rx, "drop": drop, "tx": tx}
                         print(
                             f"{i}:",
                             f"RX={human_readable(rx)} pkt/s",
@@ -96,18 +126,16 @@ class ConsoleThread(threading.Thread):
                             f"TX={human_readable(tx)} pkt/s",
                         )
                     cur = new
-        
             except KeyboardInterrupt:
                 terminate = True
-            except ConnectionRefusedError:
-                connection_retry = True
             except Exception as e:
-                if isinstance(e, FileNotFoundError):
-                    e = f"{self.sock_path}: {e}"
+                e = f"{self.sock_path}: {e}"
                 print(f"error: {e}")
+                connection_retry = True
             finally:
                 if self.sock is not None:
                     self.sock.close()
+                    self.sock = None
                 if terminate:
                     break
         print('Thread #%s stopped' % self.ident)
@@ -140,9 +168,10 @@ def main():
         "-t",
         "--time",
         type=int,
-        default=1,
+        default=0,
         help="""
-        Time interval between each statistics sample.
+        Time interval between each statistics sample,
+        default to 0 means rate caculation such as pps is disabled.
         """,
     )
     parser.add_argument(
@@ -153,9 +182,8 @@ def main():
         help="""
         REST API port for statistics polling.
         """,
-    )
+    )  
     args = parser.parse_args()
-
     if args.sock_path:
         sock_path = args.sock_path
     elif args.file_prefix:
@@ -164,15 +192,21 @@ def main():
         print("Please specify --file-prefix or --sock-path")
         raise SystemExit
 
-    console_thread = ConsoleThread(sock_path, args.time)
-    console_thread.start()
+    global sock_telemetry
+    sock_telemetry = DPDKTelemetry(sock_path, args.time)
+    enable_console_thread = (args.time != 0)
+    if enable_console_thread:
+        console_thread = ConsoleThread(sock_path, args.time)
+        console_thread.start()
     try:
         app.run(host="0.0.0.0", port=args.port, debug=False, use_reloader=False)
     except Exception as e:
         print(f"error: {e}")
     finally:
-        console_thread.shutdown_flag.set()
-    console_thread.join()
+        if enable_console_thread:
+            console_thread.shutdown_flag.set()
+    if enable_console_thread:
+        console_thread.join()
 
 if __name__ == "__main__":
     main()
