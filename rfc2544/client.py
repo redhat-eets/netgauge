@@ -341,22 +341,16 @@ if __name__ == "__main__":
         type=bool,
         help="use dst mac flows",
     )
-    parser.add_argument(
-        "--rate-unit", dest="rate_unit", type=str, help="rate unit"
-    )
+    parser.add_argument("--rate-unit", dest="rate_unit", type=str, help="rate unit")
     parser.add_argument("--rate", dest="rate", type=int, help="rate")
-    parser.add_argument(
-        "--one-shot", dest="one_shot", type=int, help="one shot"
-    )
+    parser.add_argument("--one-shot", dest="one_shot", type=int, help="one shot")
     parser.add_argument(
         "--no-promisc",
         dest="no_promisc",
         type=bool,
         help="no promiscuous mode",
     )
-    parser.add_argument(
-        "--dst-macs", dest="dst_macs", type=str, help="dst macs"
-    )
+    parser.add_argument("--dst-macs", dest="dst_macs", type=str, help="dst macs")
     parser.add_argument(
         "--binary-search-extra-args",
         dest="binary_search_extra_args",
