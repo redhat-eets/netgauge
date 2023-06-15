@@ -6,6 +6,7 @@ import json
 import datetime
 import time
 
+CLIENT_ARGS = ["server_addr", "server_port", "action", "timeout"]
 
 def actionGetResult(args, returnResults=False):
     response = requests.get(
@@ -27,37 +28,12 @@ def actionGetResult(args, returnResults=False):
 
 
 def actionStartTrafficgen(args, returnResults=False):
-    json_data = {
-        "l3": args.l3,
-        "device_pairs": args.device_pairs,
-        "search_runtime": args.search_runtime,
-        "validation_runtime": args.validation_runtime,
-        "num_flows": args.num_flows,
-        "frame_size": args.frame_size,
-        "max_loss_pct": args.max_loss_pct,
-        "sniff_runtime": args.sniff_runtime,
-        "search_granularity": args.search_granularity,
-        "rate_tolerance": args.rate_tolerance,
-        "runtime_tolerance": args.runtime_tolerance,
-        "negative_packet_loss": args.negative_packet_loss,
-        "rate_tolerance_failure": args.rate_tolerance_failure,
-        "binary_search_extra_args": args.binary_search_extra_args,
-        "active_device_pairs": args.active_device_pairs,
-        "traffic_direction": args.traffic_direction,
-        "duplicate_packet_failure": args.duplicate_packet_failure,
-        "send_teaching_warmup": args.send_teaching_warmup,
-        "teaching_warmup_packet_type": args.teaching_warmup_packet_type,
-        "teaching_warmup_packet_rate": args.teaching_warmup_packet_rate,
-        "use_src_ip_flows": args.use_src_ip_flows,
-        "use_dst_ip_flows": args.use_dst_ip_flows,
-        "use_src_mac_flows": args.use_src_mac_flows,
-        "use_dst_mac_flows": args.use_dst_mac_flows,
-        "rate_unit": args.rate_unit,
-        "rate": args.rate,
-        "one_shot": args.one_shot,
-        "no_promisc": args.no_promisc,
-        "dst_macs": args.dst_macs,
-    }
+    json_data = {}
+    for arg in vars(args):
+        val = getattr(args, arg)
+        if (val is not None) and (arg not in CLIENT_ARGS):
+            json_data[arg] = val
+    
     response = requests.post(
         "http://"
         + args.server_addr
