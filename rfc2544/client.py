@@ -28,7 +28,7 @@ def actionGetResult(args, returnResults=False):
 
 def actionStartTrafficgen(args, returnResults=False):
     json_data = {
-        "l3": l3,
+        "l3": args.l3,
         "device_pairs": args.device_pairs,
         "search_runtime": args.search_runtime,
         "validation_runtime": args.validation_runtime,
@@ -41,7 +41,22 @@ def actionStartTrafficgen(args, returnResults=False):
         "runtime_tolerance": args.runtime_tolerance,
         "negative_packet_loss": args.negative_packet_loss,
         "rate_tolerance_failure": args.rate_tolerance_failure,
-        "binary_search_extra_args": [],
+        "binary_search_extra_args": args.binary_search_extra_args,
+        "active_device_pairs": args.active_device_pairs,
+        "traffic_direction": args.traffic_direction,
+        "duplicate_packet_failure": args.duplicate_packet_failure,
+        "send_teaching_warmup": args.send_teaching_warmup,
+        "teaching_warmup_packet_type": args.teaching_warmup_packet_type,
+        "teaching_warmup_packet_rate": args.teaching_warmup_packet_rate,
+        "use_src_ip_flows": args.use_src_ip_flows,
+        "use_dst_ip_flows": args.use_dst_ip_flows,
+        "use_src_mac_flows": args.use_src_mac_flows,
+        "use_dst_mac_flows": args.use_dst_mac_flows,
+        "rate_unit": args.rate_unit,
+        "rate": args.rate,
+        "one_shot": args.one_shot,
+        "no_promisc": args.no_promisc,
+        "dst_macs": args.dst_macs,
     }
     response = requests.post(
         "http://"
@@ -156,14 +171,19 @@ def run(args):
 
 
 if __name__ == "__main__":
-    global l3
-    l3 = False
     logging.basicConfig()
     parser = argparse.ArgumentParser(description="Trafficgen client")
     parser.add_argument(
         "action",
         help="specify what action the server will take",
         choices=["start", "stop", "status", "get-result", "get-mac", "auto"],
+    )
+    parser.add_argument(
+        "--l3",
+        dest="l3",
+        help="l3",
+        default=False,
+        type=bool,
     )
     parser.add_argument(
         "--frame-size",
@@ -262,6 +282,101 @@ if __name__ == "__main__":
         help="rate tolerance failure",
     )
     parser.add_argument(
+        "--active-device-pairs",
+        dest="active_device_pairs",
+        default=None,
+        type=str,
+        help="active device pairs",
+    )
+    parser.add_argument(
+        "--traffic-direction",
+        dest="traffic_direction",
+        default=None,
+        type=str,
+        help="traffic direction",
+    )
+    parser.add_argument(
+        "--duplicate-packet-failure",
+        dest="duplicate_packet_failure",
+        default=None,
+        type=str,
+        help="duplicate packet failure",
+    )
+    parser.add_argument(
+        "--send-teaching-warmup",
+        dest="send_teaching_warmup",
+        default=None,
+        type=bool,
+        help="send teaching warmup",
+    )
+    parser.add_argument(
+        "--teaching-warmup-packet-type",
+        dest="teaching_warmup_packet_type",
+        default=None,
+        type=str,
+        help="teaching warmup packet type",
+    )
+    parser.add_argument(
+        "--teaching-warmup-packet-rate",
+        dest="teaching_warmup_packet_rate",
+        default=None,
+        type=int,
+        help="teaching warmup packet rate",
+    )
+    parser.add_argument(
+        "--use-src-ip-flows",
+        dest="use_src_ip_flows",
+        default=None,
+        type=bool,
+        help="use src ip flows",
+    )
+    parser.add_argument(
+        "--use-dst-ip-flows",
+        dest="use_dst_ip_flows",
+        default=None,
+        type=bool,
+        help="use dst ip flows",
+    )
+    parser.add_argument(
+        "--use-src-mac-flows",
+        dest="use_src_mac_flows",
+        default=None,
+        type=bool,
+        help="use src mac flows",
+    )
+    parser.add_argument(
+        "--use-dst-mac-flows",
+        dest="use_dst_mac_flows",
+        default=None,
+        type=bool,
+        help="use dst mac flows",
+    )
+    parser.add_argument(
+        "--rate-unit", dest="rate_unit", default=None, type=str, help="rate unit"
+    )
+    parser.add_argument("--rate", dest="rate", default=None, type=int, help="rate")
+    parser.add_argument(
+        "--one-shot", dest="one_shot", default=None, type=int, help="one shot"
+    )
+    parser.add_argument(
+        "--no-promisc",
+        dest="no_promisc",
+        default=None,
+        type=bool,
+        help="no promiscuous mode",
+    )
+    parser.add_argument(
+        "--dst-macs", dest="dst_macs", default=None, type=str, help="dst macs"
+    )
+    parser.add_argument(
+        "--binary-search-extra-args",
+        dest="binary_search_extra_args",
+        default=None,
+        type=str,
+        help="binary search extra args (list in string)",
+    )
+    # Auto mode arguments
+    parser.add_argument(
         "--config", dest="config", type=str, help="path to the config yaml"
     )
     parser.add_argument(
@@ -272,4 +387,9 @@ if __name__ == "__main__":
         help="timeout of auto in minutes",
     )
     args = parser.parse_args()
+
+    if args.l3 and not args.dst_macs:
+        print("l3 requires dst_macs")
+        exit(1)
+
     run(args)
