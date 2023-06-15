@@ -9,13 +9,20 @@ import json
 import socket
 import time
 import threading
-from flask import Flask
+from collections import defaultdict
+from flask import (Flask, jsonify)
 
 app = Flask(__name__)
 
-@app.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
+rest_data = defaultdict(dict)
+
+@app.route("/pps")
+def pps():
+    return jsonify(rest_data["pps"])
+
+@app.route("/ethdev_stats")
+def ethdev_stats():
+    return jsonify(rest_data["ethdev_stats"])
 
 def human_readable(value: float) -> str:
     units = ("K", "M", "G")
@@ -37,42 +44,43 @@ class ConsoleThread(threading.Thread):
         self.shutdown_flag = threading.Event()
         self.sock_path = sock_path
         self.period = period
-   
+        self.sock = None
+        self.max_out_len = 0
+        self.stats = dict()
+
+    def cmd(self, c):
+        self.sock.send(c.encode())
+        return json.loads(self.sock.recv(self.max_out_len))
+    
+    def get_stats(self, port_ids):
+        all_stats = {}
+        for i in port_ids:
+            data = self.cmd(f"/ethdev/stats,{i}")
+            all_stats[i] = data["/ethdev/stats"]
+        rest_data["ethdev_stats"] = all_stats
+        return all_stats
+    
     def run(self):
         print('Thread #%s started' % self.ident)
-        sock = None
         terminate = False
         connection_retry = False
-
         while not self.shutdown_flag.is_set(): 
             try:
                 if connection_retry:
-                    time.sleep(5)
+                    print("Retry socket Connection in 1 second...")
+                    time.sleep(1)
                     connection_retry = False
-                sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-                sock.connect(self.sock_path)
+                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+                self.sock.connect(self.sock_path)
                 print(f"Socket successfully connected to {self.sock_path}")
-                data = json.loads(sock.recv(1024).decode())
-                max_out_len = data["max_output_len"]
-        
-                def cmd(c):
-                    sock.send(c.encode())
-                    return json.loads(sock.recv(max_out_len))
-        
-                port_ids = cmd("/ethdev/list")["/ethdev/list"]
-        
-                def get_stats():
-                    all_stats = {}
-                    for i in port_ids:
-                        data = cmd(f"/ethdev/stats,{i}")
-                        all_stats[i] = data["/ethdev/stats"]
-                    return all_stats
-        
-                cur = get_stats()
-        
+                data = json.loads(self.sock.recv(1024).decode())
+                self.max_out_len = data["max_output_len"]
+                port_ids = self.cmd("/ethdev/list")["/ethdev/list"]
+                rest_data["pps"] = defaultdict(dict)
+                cur = self.get_stats(port_ids)
                 while not self.shutdown_flag.is_set():
                     time.sleep(self.period)
-                    new = get_stats()
+                    new = self.get_stats(port_ids)
                     print("---")
                     for i,stats in new.items():
                         rx = (stats["ipackets"] - cur[i]["ipackets"]) / self.period
@@ -80,6 +88,7 @@ class ConsoleThread(threading.Thread):
                         tx = (stats["opackets"] - cur[i]["opackets"]) / self.period
                         if rx == 0 and tx == 0 and drop == 0:
                             continue
+                        rest_data["pps"][i] = {"rx": rx, "drop": drop, "tx": tx}
                         print(
                             f"{i}:",
                             f"RX={human_readable(rx)} pkt/s",
@@ -91,18 +100,18 @@ class ConsoleThread(threading.Thread):
             except KeyboardInterrupt:
                 terminate = True
             except ConnectionRefusedError:
-                print(f"Connection refused. Retrying in 5 seconds...")
                 connection_retry = True
             except Exception as e:
                 if isinstance(e, FileNotFoundError):
                     e = f"{self.sock_path}: {e}"
                 print(f"error: {e}")
             finally:
-                if sock is not None:
-                    sock.close()
+                if self.sock is not None:
+                    self.sock.close()
                 if terminate:
                     break
         print('Thread #%s stopped' % self.ident)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -120,7 +129,7 @@ def main():
         """,
     )
     group.add_argument(
-        "-p",
+        "-f",
         "--file-prefix",
         help="""
         Socket path: /var/run/dpdk/<file-prefix>/dpdk_telemetry.v2,
@@ -136,6 +145,15 @@ def main():
         Time interval between each statistics sample.
         """,
     )
+    parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=9001,
+        help="""
+        REST API port for statistics polling.
+        """,
+    )
     args = parser.parse_args()
 
     if args.sock_path:
@@ -148,8 +166,13 @@ def main():
 
     console_thread = ConsoleThread(sock_path, args.time)
     console_thread.start()
-    app.run(host="0.0.0.0", port=8000, debug=False, use_reloader=False)
-    console_thread.shutdown_flag.set()
+    try:
+        app.run(host="0.0.0.0", port=args.port, debug=False, use_reloader=False)
+    except Exception as e:
+        print(f"error: {e}")
+    finally:
+        console_thread.shutdown_flag.set()
+    console_thread.join()
 
 if __name__ == "__main__":
     main()
