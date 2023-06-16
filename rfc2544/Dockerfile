@@ -34,4 +34,4 @@ RUN chmod 777 /root/trafficgen_entry.sh /root/tgen/binary-search.py /root/tgen/t
        && ln -f -s /usr/bin/python3 /usr/bin/python
 
 ENTRYPOINT ["/root/trafficgen_entry.sh"]
-CMD ["server"]
+CMD ["server", "8080"]

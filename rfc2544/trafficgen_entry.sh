@@ -183,7 +183,7 @@ if [ "$1" == "start" ]; then
             ${dst_mac_opt} ${vf_extra_opt}
     done
 elif [ "$1" == "server" ]; then
-    taskset -c ${client_cpu} waitress-serve --host=0.0.0.0 --port=8080 --call rest:create_app
+    taskset -c ${client_cpu} waitress-serve --host=0.0.0.0 --port="$2" --call rest:create_app
 fi
 
 tmux kill-session -t trex 2>/dev/null
