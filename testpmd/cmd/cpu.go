@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"regexp"
 
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
@@ -10,9 +11,17 @@ import (
 func getProcCpuset() cpuset.CPUSet {
 	content, err := ioutil.ReadFile("/proc/self/status")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	r := regexp.MustCompile(`Cpus_allowed_list:\s*([0-9,-]*)\r?\n`)
 	cpus := r.FindStringSubmatch(string(content))[1]
-	return cpuset.MustParse(cpus)
+	cset, err := cpuset.Parse(cpus)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return cset
+}
+
+func firstCpuFromCpuset(cset cpuset.CPUSet) int {
+	return cset.List()[0]
 }
