@@ -2,32 +2,89 @@ from marshmallow import fields, Schema
 
 
 class ResultSchema(Schema):
-    tx_l1_bps = fields.Float(
-        required=True, error_messages={"required": "tx_l1_bps is required."}
-    )
-    tx_l2_bps = fields.Float(
-        required=True, error_messages={"required": "tx_l2_bps is required."}
-    )
-    tx_pps = fields.Float(
-        required=True, error_messages={"required": "tx_pps is required."}
-    )
     rx_l1_bps = fields.Float(
         required=True, error_messages={"required": "rx_l1_bps is required."}
     )
     rx_l2_bps = fields.Float(
         required=True, error_messages={"required": "rx_l2_bps is required."}
     )
+    rx_packets = fields.Int(
+        required=True, error_messages={"required": "rx_packets is required."}
+    )
+    rx_lost_packets = fields.Int(
+        required=True, error_messages={"required": "rx_lost_packets is required."}
+    )
+    rx_lost_packets_pct = fields.Float(
+        required=True, error_messages={"required": "rx_lost_packets_pct is required."}
+    )
     rx_pps = fields.Float(
         required=True, error_messages={"required": "rx_pps is required."}
     )
-    rx_latency_minimum = fields.Float(
-        required=True, error_messages={"required": "rx_latency_minimum is required."}
+    rx_lost_pps = fields.Float(
+        required=True, error_messages={"required": "rx_lost_pps is required."}
+    )
+    rx_latency_average = fields.Float(
+        required=True, error_messages={"required": "rx_latency_average is required."}
+    )
+    rx_latency_packets = fields.Int(
+        required=True, error_messages={"required": "rx_latency_packets is required."}
     )
     rx_latency_maximum = fields.Float(
         required=True, error_messages={"required": "rx_latency_maximum is required."}
     )
-    rx_latency_average = fields.Float(
-        required=True, error_messages={"required": "rx_latency_average is required."}
+    rx_latency_minimum = fields.Float(
+        required=True, error_messages={"required": "rx_latency_minimum is required."}
+    )
+    rx_latency_l1_bps = fields.Float(
+        required=True, error_messages={"required": "rx_latency_l1_bps is required."}
+    )
+    rx_latency_l2_bps = fields.Float(
+        required=True, error_messages={"required": "rx_latency_l2_bps is required."}
+    )
+    rx_latency_pps = fields.Float(
+        required=True, error_messages={"required": "rx_latency_pps is required."}
+    )
+    rx_latency_lost_pps = fields.Float(
+        required=True, error_messages={"required": "rx_latency_lost_pps is required."}
+    )
+    rx_active = fields.Boolean(
+        required=True, error_messages={"required": "rx_active is required."}
+    )
+    tx_l1_bps = fields.Float(
+        required=True, error_messages={"required": "tx_l1_bps is required."}
+    )
+    tx_l2_bps = fields.Float(
+        required=True, error_messages={"required": "tx_l2_bps is required."}
+    )
+    tx_packets = fields.Int(
+        required=True, error_messages={"required": "tx_packets is required."}
+    )
+    tx_pps = fields.Float(
+        required=True, error_messages={"required": "tx_pps is required."}
+    )
+    tx_pps_target = fields.Float(
+        required=True, error_messages={"required": "tx_pps_target is required."}
+    )
+    tx_latency_packets = fields.Int(
+        required=True, error_messages={"required": "tx_latency_packets is required."}
+    )
+    tx_latency_l1_bps = fields.Float(
+        required=True, error_messages={"required": "tx_latency_l1_bps is required."}
+    )
+    tx_latency_l2_bps = fields.Float(
+        required=True, error_messages={"required": "tx_latency_l2_bps is required."}
+    )
+    tx_latency_pps = fields.Float(
+        required=True, error_messages={"required": "tx_latency_pps is required."}
+    )
+    tx_active = fields.Boolean(
+        required=True, error_messages={"required": "tx_active is required."}
+    )
+    tx_tolerance_min = fields.Float(
+        required=True, error_messages={"required": "tx_tolerance_min is required."}
+    )
+    tx_tolerance_max = fields.Float(
+        required=True, error_messages={"required": "tx_tolerance_max is required."}
     )
 
 
