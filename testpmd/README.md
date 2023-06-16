@@ -33,7 +33,7 @@ podman build -t testpmd:21.11.2 --build-arg VER=21.11.2 .
 
 To further reduce this container image size, one may choose to build the image based on the ubi-micro,
 ```
-podman build -t testpmd-micro:22.11.2 -f Dockerfile-micro
+podman build -t testpmd-micro:22.11.2 -f Dockerfile-micro .
 ```
 
 This generates an image size of 87M bytes.
