@@ -20,7 +20,7 @@ type sockConnetor struct {
 
 const (
 	sockPrefix           = "/var/run/dpdk/"
-	sockSurfix           = "/dpdk_telemetry.v2"
+	sockSuffix           = "/dpdk_telemetry.v2"
 	maxInitMessageLength = 2048
 )
 

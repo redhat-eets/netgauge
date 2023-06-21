@@ -132,7 +132,7 @@ func startTestpmd(c *gin.Context) {
 
 func getMacByID(c *gin.Context) {
 	id := c.Param("id")
-	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSuffix)
 	portInfo, err := connector.getPortInfo(id)
 	if err != nil {
 		log.Println(err)
@@ -149,7 +149,7 @@ func getMacByID(c *gin.Context) {
 }
 
 func listPorts(c *gin.Context) {
-	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSuffix)
 	ports, err := connector.getPorts()
 	if err != nil {
 		log.Println(err)
@@ -161,7 +161,7 @@ func listPorts(c *gin.Context) {
 
 func getStatsByID(c *gin.Context) {
 	port := c.Param("id")
-	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSuffix)
 	stats, err := connector.getStatsByPort(port)
 	if err != nil {
 		log.Println(err)
@@ -206,7 +206,7 @@ func getStatsByID(c *gin.Context) {
 }
 
 func getPortsInfo(c *gin.Context) {
-	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSuffix)
 	info, err := connector.getPortsInfo()
 	if err != nil {
 		log.Println(err)
