@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
+	"strings"
 )
 
 func intToString(a []int, delim string) string {
@@ -22,4 +24,16 @@ func portMask(ports int) string {
 		a = a | (1 << i)
 	}
 	return fmt.Sprintf("%#x", a)
+}
+
+func isEmpty(value interface{}) bool {
+	return value == nil || (reflect.ValueOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil())
+}
+
+func stripParams(command string) string {
+	index := strings.IndexRune(command, ',')
+	if index == -1 {
+		return command
+	}
+	return command[:index]
 }

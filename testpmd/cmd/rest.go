@@ -21,6 +21,18 @@ type testpmd_start struct {
 	PeerMac []string `json:"macs"`
 }
 
+type portMac struct {
+	Port string `json:"port_id"`
+	Mac  string `json:"mac_address"`
+}
+
+type portStats struct {
+	Port          string  `json:"port_id"`
+	InputPackets  float64 `json:"ipackets"`
+	OutputPackets float64 `json:"opackets"`
+	InputMissed   float64 `json:"imissed"`
+}
+
 var schemaStart = []byte(`{
     "type": "object",
     "properties": {
@@ -39,6 +51,9 @@ var schemaStart = []byte(`{
 
 func setup_rest_endpoint(router *gin.Engine) {
 	router.GET("/testpmd/status", getTestpmdStatus)
+	router.GET("/testpmd/mac/:id", getMacByID)
+	router.GET("/testpmd/ports", listPorts)
+	router.GET("/testpmd/stats/:id", getStatsByID)
 	router.POST("/testpmd/stop", stopTestpmd)
 	router.POST("/testpmd/start", startTestpmd)
 }
@@ -77,6 +92,7 @@ func startTestpmd(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "no data"})
+		return
 	}
 	errs := validateJson(schemaStart, &data)
 	if len(errs) > 0 {
@@ -101,4 +117,79 @@ func startTestpmd(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, testpmd_status{FwdMode: pTestpmd.fwdMode,
 		Running: pTestpmd.running, FilePrefix: pTestpmd.filePrefix})
+}
+
+func getMacByID(c *gin.Context) {
+	id := c.Param("id")
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	portInfo, err := connector.getPortInfo(id)
+	if err != nil {
+		log.Println(err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Telemetry not working"})
+		return
+	}
+	if data, ok := portInfo["mac_addr"]; ok {
+		if mac, ok := data.(string); ok {
+			c.IndentedJSON(http.StatusOK, portMac{Port: id, Mac: mac})
+		}
+		return
+	}
+	c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "System got invalid data"})
+}
+
+func listPorts(c *gin.Context) {
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	ports, err := connector.getPorts()
+	if err != nil {
+		log.Println(err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Telemetry not working"})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, ports)
+}
+
+func getStatsByID(c *gin.Context) {
+	port := c.Param("id")
+	connector := newSockConnector(sockPrefix + pTestpmd.filePrefix + sockSurfix)
+	stats, err := connector.getStatsByPort(port)
+	if err != nil {
+		log.Println(err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Telemetry not working"})
+		return
+	}
+	var ipackets, imissed, opackets float64
+	invalid := false
+	if data, ok := stats["ipackets"]; ok {
+		if ipackets, ok = data.(float64); !ok {
+			invalid = true
+			log.Printf("ipackets type: %T\n", stats["ipackets"])
+		}
+	} else {
+		invalid = true
+	}
+	if data, ok := stats["imissed"]; ok {
+		if imissed, ok = data.(float64); !ok {
+			invalid = true
+			log.Printf("ipackets type: %T\n", stats["ipackets"])
+		}
+	} else {
+		invalid = true
+	}
+	if data, ok := stats["opackets"]; ok {
+		if opackets, ok = data.(float64); !ok {
+			invalid = true
+			log.Printf("ipackets type: %T\n", stats["ipackets"])
+		}
+	} else {
+		invalid = true
+	}
+	if invalid {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "System got invalid data"})
+	} else {
+		c.IndentedJSON(http.StatusOK,
+			portStats{Port: port,
+				InputPackets:  ipackets,
+				InputMissed:   imissed,
+				OutputPackets: opackets})
+	}
 }
