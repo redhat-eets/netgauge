@@ -135,3 +135,58 @@ curl -X POST localhost:9000/testpmd/stop
     "name": "testpmd"
 }
 ```
+
+To list the testpmd port IDs,
+
+```
+# curl localhost:9000/testpmd/ports
+[
+    0,
+    1
+]
+```
+
+To get the MAC address from a port ID,
+```
+ curl localhost:9000/testpmd/mac/0
+{
+    "port_id": "0",
+    "mac_address": "1A:BC:2F:CA:CD:62"
+}
+```
+
+To get the traffic stats from a port ID,
+```
+# curl localhost:9000/testpmd/stats/0
+{
+    "port_id": "0",
+    "ipackets": 7,
+    "opackets": 0,
+    "imissed": 0
+}
+```
+
+To get information from all ports used by the testpmd,
+```
+# curl localhost:9000/testpmd/portsinfo
+[
+    {
+        "port_id": 0,
+        "name": "0000:18:01.0",
+        "state": 1,
+        "mac_addr": "1A:BC:2F:CA:CD:62",
+        "numa_node": 0,
+        "mtu": 1500,
+        "promiscuous": 1
+    },
+    {
+        "port_id": 1,
+        "name": "0000:18:09.0",
+        "state": 1,
+        "mac_addr": "CE:69:CB:CF:35:2E",
+        "numa_node": 0,
+        "mtu": 1500,
+        "promiscuous": 1
+    }
+]
+```
