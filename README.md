@@ -11,5 +11,5 @@ The user space networking performance test components include:
 ### Direct Connection
 ![The trafficgen and testpmd are directly connected](diagrams/RFC2544-direct-connection.png?raw=true "Direct Connection")
 
-### Conneced Through a Switch
+### Connect Through a Switch
 ![The trafficgen and testpmd are connected through a switch](diagrams/RFC2544-switch-connection.png?raw=true "Switch Connection")
