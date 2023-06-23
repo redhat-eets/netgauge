@@ -8,8 +8,12 @@ The user space networking performance test components include:
 
 ## User Space Networking Performance Test Setup
 
+Users may choose to use either the direct connection setup, or  the switch connected setup. The direct connection setup may provide a better performance reading for user space traffic throughput and latency.
+
 ### Direct Connection
 ![The trafficgen and testpmd are directly connected](diagrams/RFC2544-direct-connection.png?raw=true "Direct Connection")
 
 ### Connect Through a Switch
 ![The trafficgen and testpmd are connected through a switch](diagrams/RFC2544-switch-connection.png?raw=true "Switch Connection")
+
+In this switch connected setup, two VLANs are required to seperate the traffic towards the testpmd ports. In the above diagram, they are denoted as VLAN 1 and VLAN 2. 
