@@ -1,10 +1,10 @@
 # Netgauge Project
 
-The netgauge project develops components that are used for telco edge node user space networking performance test and telemetry data collection. The kernel networking telemetry collection is not in the scope of this project, nor is the kernel networking performance test tooling.
+The netgauge project focuses on developing components specifically designed for performance testing and telemetry data collection in user space networking for telco edge nodes. It does not encompass kernel networking telemetry collection or kernel networking performance testing tools. The project's primary objective is to provide efficient and reliable solutions tailored to user space networking performance evaluation and data gathering within telco edge node environments.
 
 The user space networking performance test components include:
-* [A RFC2544 traffic generator container](rfc2544/README.md) that supports REST API for remote control and data collection
-* [A testpmd wrapper container](testpmd/README.md) that supports REST API for remote control and data collection
+* [A RFC2544 traffic generator container](rfc2544/README.md) that supports REST APIs for remote control and data collection
+* [A testpmd wrapper container](testpmd/README.md) that supports REST APIs for remote control and data collection
 
 ## User Space Networking Performance Test Setup
 
