@@ -1,0 +1,88 @@
+name: trafficgen-test
+run-name: trafficgen-test initiated by ${{ github.actor }}
+on:
+  pull_request:
+    types: [ labeled ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'TREX version'
+        required: true
+        default: '2.88'
+        type: choice
+        options:
+        - '2.88'
+        - '3.02'
+      lr:
+        description: 'Acceptable RX line rate drop %'
+        required: true
+        default: 50
+jobs:
+  prepare-test-data:
+    runs-on: ubuntu-latest
+    if: contains(github.event.label.name, 'trafficgen-test')
+    outputs:
+      version: ${{ steps.step1.outputs.version }}
+      bw: ${{ steps.step2.outputs.bw }}
+    steps:
+      - name: Get TREX version
+        id: step1
+        run: |    
+          if [ ${{ github.event.inputs.tag }} ]; then
+            echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else 
+            echo "version=2.88" >> $GITHUB_OUTPUT
+          fi
+      - name: Get acceptable RX line rate drop %
+        id: step2
+        run: |
+          if [[ ${{ github.event.label.name }} == "trafficgen-test-"* ]]; then
+            bw=$(echo ${{ github.event.label.name }} | sed 's/[^0-9]*//g')
+            echo "Label-defined RX line rate drop pct is ${bw}."
+            echo "bw=${bw}" >> $GITHUB_OUTPUT
+          elif [ ${{ github.event.inputs.lr }} ]; then
+            bw=${{ github.event.inputs.lr }}
+            echo "On-demand input RX line rate drop pct is ${bw}."
+            echo "bw=${bw}" >> $GITHUB_OUTPUT
+          else
+            echo "Default RX line rate drop pct is 50."
+            echo "bw=50" >> $GITHUB_OUTPUT
+          fi
+  trafficgen-test:
+    needs: [ prepare-test-data ]
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: trafficgen test
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          cd rfc2544/
+          sudo podman rmi -f trafficgen:ci 2>/dev/null
+          sudo podman build -t trafficgen:ci --build-arg TREX_VERSION=${{ needs.prepare-test-data.outputs.version }} .
+          sudo podman images trafficgen:ci
+          sudo podman run -d --rm -p 8080:8080 --name netgauge-trafficgen --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 5,7,9,11,13,15,17 -e pci_list=0000:87:00.0,0000:d8:00.0 trafficgen:ci
+          sleep 10
+          sudo podman ps | grep netgauge-trafficgen
+          #warm up
+          python3 client.py start --server-addr 127.0.0.1 --server-port 8080 --timeout 60
+          sleep 60
+          python3 client.py stop --server-addr 127.0.0.1 --server-port 8080 --timeout 60
+          #actual rate measurement
+          python3 client.py auto --server-addr 127.0.0.1 --server-port 8080 --timeout 60 | tee result.json
+          rx_l1_bps=$(cat result.json | tr "'" '"' | tr "True" "true" | jq -r '.["0"].rx_l1_bps')
+          #25G interface max observed bps
+          rx_l1_bps_max=22568576357
+          #Acceptable RX rate = max rate - pct drop from max
+          rx_bw_pct_limit=$(echo "scale=0; (${rx_l1_bps_max}-(${rx_l1_bps_max}*${{ needs.prepare-test-data.outputs.bw }})/100)" | bc -l)
+          if (($(echo "${rx_l1_bps} < ${rx_bw_pct_limit}" | bc -l))); then
+            echo "Traffic test failed. rx_l1_bps ${rx_l1_bps} was below rx_bw_pct_limit ${rx_bw_pct_limit}. Acceptable RX line rate drop pct was ${{ needs.prepare-test-data.outputs.bw }}."
+            exit 1
+          else
+            echo "Traffic test passed. rx_l1_bps ${rx_l1_bps} was above rx_bw_pct_limit ${rx_bw_pct_limit}. Acceptable RX line rate drop pct was ${{ needs.prepare-test-data.outputs.bw }}."
+          fi
+          sudo podman rmi -f trafficgen:ci 2>/dev/null
+      - name: Display Status
+        run: echo "This job's status is ${{ job.status }}."
