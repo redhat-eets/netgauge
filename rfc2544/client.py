@@ -119,7 +119,7 @@ def actionAuto(args):
             break
 
     results = actionGetResult(args, returnResults=True)
-    print(results)
+    print(json.dumps(results))
 
 
 def overwriteArgs(args, json_data):
