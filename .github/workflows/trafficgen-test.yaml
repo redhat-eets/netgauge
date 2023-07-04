@@ -20,30 +20,29 @@ on:
 jobs:
   prepare-test-data:
     runs-on: ubuntu-latest
-    if: contains(github.event.label.name, 'trafficgen-test')
+    if: contains(github.event.label.name, 'trafficgen-test')||"${{ github.event.inputs.tag }}"
     outputs:
       version: ${{ steps.step1.outputs.version }}
       bw: ${{ steps.step2.outputs.bw }}
     steps:
-      - name: Get TREX version
+      - name: Get TREX version and RX line rate drop % on demand
         id: step1
         run: |    
           if [ ${{ github.event.inputs.tag }} ]; then
             echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "On-demand input RX line rate drop pct is ${{ github.event.inputs.lr }}."
+            echo "bw=${{ github.event.inputs.lr }}" >> $GITHUB_OUTPUT
           else 
             echo "version=2.88" >> $GITHUB_OUTPUT
           fi
-      - name: Get acceptable RX line rate drop %
+      - name: Get acceptable RX line rate drop % from the label
         id: step2
+        if: contains(github.event.label.name, 'trafficgen-test')
         run: |
           if [[ ${{ github.event.label.name }} == "trafficgen-test-"* ]]; then
             bw=$(echo ${{ github.event.label.name }} | sed 's/[^0-9]*//g')
             echo "Label-defined RX line rate drop pct is ${bw}."
-            echo "bw=${bw}" >> $GITHUB_OUTPUT
-          elif [ ${{ github.event.inputs.lr }} ]; then
-            bw=${{ github.event.inputs.lr }}
-            echo "On-demand input RX line rate drop pct is ${bw}."
-            echo "bw=${bw}" >> $GITHUB_OUTPUT
+            echo "bw=${bw}" >> $GITHUB_OUTPUT        
           else
             echo "Default RX line rate drop pct is 50."
             echo "bw=50" >> $GITHUB_OUTPUT
