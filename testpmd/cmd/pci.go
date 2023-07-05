@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -66,7 +65,7 @@ func normalizePci(pci string) string {
 }
 
 func getNumaNode(pci string) (int, error) {
-	numaStr, err := ioutil.ReadFile(pciDeviceDir + pci + "/numa_node")
+	numaStr, err := os.ReadFile(pciDeviceDir + pci + "/numa_node")
 	if err != nil {
 		return -1, err
 	}
@@ -117,25 +116,25 @@ func unbind(pci string) error {
 	cmd := exec.Command("readlink", "-f", driverPath)
 	out, _ := cmd.Output()
 	log.Printf("unbind: echo %s > %s\n", pci, strings.TrimSpace(string(out))+"/unbind")
-	return ioutil.WriteFile(strings.TrimSpace(string(out))+"/unbind", []byte(pci), 0200)
+	return os.WriteFile(strings.TrimSpace(string(out))+"/unbind", []byte(pci), 0200)
 }
 
 func bind(pci string, driver string) error {
 	driverPath := pciDriverDir + driver
 	log.Printf("bind: echo %s > %s\n", pci, driverPath+"/bind")
-	return ioutil.WriteFile(driverPath+"/bind", []byte(pci), 0200)
+	return os.WriteFile(driverPath+"/bind", []byte(pci), 0200)
 }
 
 func pciNewID(vendor string, device string, driver string) error {
 	newIDPath := pciDriverDir + driver + "/new_id"
 	log.Printf("pciNewID: echo %s %s > %s\n", vendor, device, newIDPath)
-	return ioutil.WriteFile(newIDPath, []byte(vendor+" "+device), 0200)
+	return os.WriteFile(newIDPath, []byte(vendor+" "+device), 0200)
 }
 
 func pciRemoveID(vendor string, device string, driver string) error {
 	removeIDPath := pciDriverDir + driver + "/remove_id"
 	log.Printf("pciRemoveID: echo %s %s > %s\n", vendor, device, removeIDPath)
-	return ioutil.WriteFile(removeIDPath, []byte(vendor+" "+device), 0200)
+	return os.WriteFile(removeIDPath, []byte(vendor+" "+device), 0200)
 }
 
 func getDriverFromDeviceVendor(vendor string, device string) (*kdDrivers, error) {
@@ -166,9 +165,9 @@ func setupDpdkPorts(dpdkDriver string, pci pciArray, record map[string]*pciInfo)
 		info := &pciInfo{}
 		record[p] = info
 		info.wasKernelPort = false
-		out, _ := ioutil.ReadFile(pciDeviceDir + p + "/vendor")
+		out, _ := os.ReadFile(pciDeviceDir + p + "/vendor")
 		info.vendor = strings.TrimSpace(string(out))
-		out, _ = ioutil.ReadFile(pciDeviceDir + p + "/device")
+		out, _ = os.ReadFile(pciDeviceDir + p + "/device")
 		info.device = strings.TrimSpace(string(out))
 		drivers, err := getDriverFromDeviceVendor(info.vendor, info.device)
 		if err != nil {

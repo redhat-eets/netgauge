@@ -8,6 +8,7 @@ import time
 
 CLIENT_ARGS = ["server_addr", "server_port", "action", "timeout"]
 
+
 def actionGetResult(args, returnResults=False):
     response = requests.get(
         "http://" + args.server_addr + ":" + str(args.server_port) + "/result"
@@ -33,7 +34,7 @@ def actionStartTrafficgen(args, returnResults=False):
         val = getattr(args, arg)
         if (val is not None) and (arg not in CLIENT_ARGS):
             json_data[arg] = val
-    
+
     response = requests.post(
         "http://"
         + args.server_addr
