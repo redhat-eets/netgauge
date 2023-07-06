@@ -12,7 +12,7 @@ steady_rate=${steady_rate:-0}
 page_prefix="rfc2544_trex"
 pciDeviceDir="/sys/bus/pci/devices"
 vf_extra_opt=${vf_extra_opt:-"--no-promisc"}
-trex_extra_opt=${trex_extra_opt:-""}   # for mlx use "--mlx5-so"
+trex_extra_opt=${trex_extra_opt:-""}   # for mlx use "--mlx5-so", for promiscuous issues use "--prom"
 pciArray=()
 
 function print_help() {
