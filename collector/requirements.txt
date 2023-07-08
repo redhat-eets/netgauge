@@ -1,3 +1,2 @@
-Flask
-flask-restplus
-Werkzeug
+watchdog
+prometheus_client
