@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"log"
 	"regexp"
 
@@ -9,7 +9,7 @@ import (
 )
 
 func getProcCpuset() cpuset.CPUSet {
-	content, err := ioutil.ReadFile("/proc/self/status")
+	content, err := os.ReadFile("/proc/self/status")
 	if err != nil {
 		log.Fatal(err)
 	}

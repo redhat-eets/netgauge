@@ -115,7 +115,7 @@ class RestApi:
                 "send_teaching_warmup",
                 "no_promisc",
             ]:
-                if result[field] == True:
+                if result[field]:
                     binary_search_command.append("--" + field.replace("_", "-"))
             elif field in [
                 "use_src_ip_flows",
