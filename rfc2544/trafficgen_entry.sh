@@ -12,13 +12,14 @@ steady_rate=${steady_rate:-0}
 page_prefix="rfc2544_trex"
 pciDeviceDir="/sys/bus/pci/devices"
 vf_extra_opt=${vf_extra_opt:-"--no-promisc"}
-trex_extra_opt=${trex_extra_opt:-""}   # for mlx use "--mlx5-so", for promiscuous issues use "--prom"
+trex_extra_opt=${trex_extra_opt:-"--prom"}   # for mlx use "--mlx5-so", for promiscuous issues use "--prom"
 pciArray=()
 
 function print_help() {
-    echo "Availble arguments: start | server | debug | help"
+    echo "Availble arguments: start | server | client | debug | help"
     echo "start - start the RFC2544 run"
     echo "server - start the rest api service and wait for rest request"
+    echo "client - run the RFC2544 rest api client"
     echo "debug - only start the trex server in foreground"
 }
 
@@ -56,7 +57,13 @@ trap sigfunc SIGTERM SIGINT SIGUSR1
 if [ "$1" == "help" ]; then
     print_help
     exit 0
-elif [[ "$1" =~ ^(server|start|debug)$ ]]; then
+elif [[ "$1" =~ ^(server|start|debug|client)$ ]]; then
+    if [[ "$1" == "client" ]]; then
+	cd /root
+	shift
+	python3 ./client.py "$@"
+	exit
+    fi
     if [ -z "${pci_list}" ]; then
         # is this a openshift sriov pod?
         pci_list=$(env | sed -n -r -e 's/PCIDEVICE.*=(.*)/\1/p' | tr '\n' ',')
