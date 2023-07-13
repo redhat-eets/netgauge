@@ -13,6 +13,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && python3 -m pip install --no-cache-dir flask \
        && python3 -m pip install --no-cache-dir marshmallow \
        && python3 -m pip install --no-cache-dir waitress \
+       && python3 -m pip install --no-cache-dir requests \
        && mkdir -p /opt/trex \
        && mkdir -p /var/log/tgen \
        && mkdir -p /root/tgen \
@@ -32,6 +33,7 @@ COPY trafficgen_entry.sh /root/
 RUN chmod 777 /root/trafficgen_entry.sh /root/tgen/binary-search.py /root/tgen/trex-query.py /root/tgen/trex-txrx.py \
        && ln -f -s /bin/python3 /bin/python \
        && ln -f -s /usr/bin/python3 /usr/bin/python
+COPY client.py /root/
 
 ENTRYPOINT ["/root/trafficgen_entry.sh"]
 CMD ["server", "8080"]
