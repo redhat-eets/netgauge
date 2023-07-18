@@ -15,7 +15,7 @@ RUN curl -L -o dpdk.tar.xz https://fast.dpdk.org/rel/dpdk-$VER.tar.xz && \
     cd build && ninja && \
     install -t /usr/local/bin app/dpdk-testpmd
 
-FROM golang:1.20.5 as gobuilder
+FROM public.ecr.aws/docker/library/golang:1.20.5 as gobuilder
 COPY . /build
 WORKDIR /build/cmd
 ENV GO111MODULE=on

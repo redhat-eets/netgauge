@@ -20,7 +20,7 @@ on:
 jobs:
   prepare-test-data:
     runs-on: ubuntu-latest
-    if: contains(github.event.label.name, 'trafficgen-test')||"${{ github.event.inputs.tag }}"
+    if: ${{ contains(github.event.label.name, 'trafficgen-test') || github.event_name == 'workflow_dispatch' }}
     outputs:
       version: ${{ steps.step3.outputs.version }}
       bw: ${{ steps.step3.outputs.bw }}
@@ -49,6 +49,7 @@ jobs:
           echo "version=2.88" >> "$GITHUB_ENV"
       - name: Collect vars and form job output
         id: step3
+        if: contains(github.event.label.name, 'trafficgen-test')||"${{ github.event_name == 'workflow_dispatch' }}"
         run: |
           echo "RX line rate drop pct is ${{ env.bw }}."
           echo "bw=${{ env.bw }}" >> "$GITHUB_OUTPUT"  
@@ -56,29 +57,39 @@ jobs:
           echo "version=${{ env.version }}" >> "$GITHUB_OUTPUT"
   trafficgen-test:
     needs: [ prepare-test-data ]
-    runs-on: self-hosted
+    runs-on: [self-hosted, trafficgen]
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: trafficgen test
+      - name: trafficgen interfaces prep
+        run: |
+          sudo modprobe vfio-pci
+          sudo podman rmi -f trafficgen:ci 2>/dev/null
+          sudo dpdk-devbind.py -u 0000:87:00.0 0000:d8:00.0 0000:87:00.1 0000:d8:00.1
+          sudo dpdk-devbind.py -b vfio-pci 0000:87:00.0 0000:d8:00.0
+      - name: trafficgen container prep
         working-directory: ${{ github.workspace }}
         run: |
           pwd
           cd rfc2544/
-          sudo podman rmi -f trafficgen:ci 2>/dev/null
           sudo podman build -t trafficgen:ci --build-arg TREX_VERSION=${{ needs.prepare-test-data.outputs.version }} .
           sudo podman images trafficgen:ci
           sudo podman run -d --rm -p 8080:8080 --name netgauge-trafficgen --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 5,7,9,11,13,15,17 -e pci_list=0000:87:00.0,0000:d8:00.0 trafficgen:ci
           sleep 10
           sudo podman ps | grep netgauge-trafficgen
+          python3 client.py status --server-addr 127.0.0.1 --server-port 8080 --timeout 60
+      - name: trafficgen test
+        working-directory: ${{ github.workspace }}
+        run: |
+          cd rfc2544/
           #warm up
           python3 client.py start --server-addr 127.0.0.1 --server-port 8080 --timeout 60
           sleep 60
           python3 client.py stop --server-addr 127.0.0.1 --server-port 8080 --timeout 60
           #actual rate measurement
           python3 client.py auto --server-addr 127.0.0.1 --server-port 8080 --timeout 60 | tee result.json
-          rx_l1_bps=$(cat result.json | tr "'" '"' | tr "True" "true" | jq -r '.["0"].rx_l1_bps')
+          rx_l1_bps=$(cat result.json | jq -r '.["0"].rx_l1_bps')
           #25G interface max observed bps
           rx_l1_bps_max=22568576357
           #Acceptable RX rate = max rate - pct drop from max
@@ -89,6 +100,9 @@ jobs:
           else
             echo "Traffic test passed. rx_l1_bps ${rx_l1_bps} was above rx_bw_pct_limit ${rx_bw_pct_limit}. Acceptable RX line rate drop pct was ${{ needs.prepare-test-data.outputs.bw }}."
           fi
+      - name: trafficgen cleanup
+        run: |
           sudo podman rmi -f trafficgen:ci 2>/dev/null
+          sudo dpdk-devbind.py -u 0000:87:00.0 0000:d8:00.0
       - name: Display Status
         run: echo "This job's status is ${{ job.status }}."

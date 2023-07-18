@@ -1,0 +1,131 @@
+name: e2e-testpmd
+run-name: e2e-testpmd initiated by ${{ github.actor }}
+on:
+  pull_request:
+    types: [ labeled ]
+  workflow_dispatch:
+    inputs:
+      trex:
+        description: 'TREX version'
+        required: true
+        default: '2.88'
+        type: choice
+        options:
+        - '2.88'
+        - '3.02'
+      dpdk:
+        description: 'DPDK version'
+        required: true
+        default: '21.11.2'          
+jobs:
+  prepare-test-data:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.label.name, 'e2e-testpmd') || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      dpdk: ${{ steps.step3.outputs.dpdk }}
+      trex: ${{ steps.step3.outputs.trex }}
+      bw: ${{ steps.step3.outputs.bw }}
+    steps:
+      - name: Get TREX version on demand
+        id: step1
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |    
+          if [ ${{ github.event.inputs.trex }} ]; then
+            echo "Input TREX version is ${{ github.event.inputs.trex }}."
+            echo "trex=${{ github.event.inputs.trex }}" >> "$GITHUB_ENV"
+            echo "Input DPDK version is ${{ github.event.inputs.dpdk }}."
+            echo "dpdk=${{ github.event.inputs.dpdk }}" >> "$GITHUB_ENV"
+          fi
+      - name: Get default versions
+        id: step2
+        if: contains(github.event.label.name, 'e2e-testpmd')
+        run: |
+          echo "dpdk=21.11.2" >> "$GITHUB_ENV"
+          echo "trex=2.88" >> "$GITHUB_ENV"
+      - name: Collect vars and form job output
+        id: step3
+        run: |
+          echo "DPDK version is ${{ env.dpdk }}."
+          echo "dpdk=${{ env.dpdk }}" >> "$GITHUB_OUTPUT"  
+          echo "TREX version is ${{ env.trex }}"
+          echo "trex=${{ env.trex }}" >> "$GITHUB_OUTPUT"
+          echo "Acceptable RX line rate is 9 Gbps (on a 25G link)."
+          echo "bw=9000000000" >> "$GITHUB_OUTPUT"
+  dut-prep:
+    needs: [ prepare-test-data ]
+    runs-on: [self-hosted, dut]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: dut interface prep
+        run: |
+          sudo modprobe vfio-pci
+          sudo podman rmi -f testpmd:ci 2>/dev/null
+          sudo dpdk-devbind.py -u 0000:87:00.0 0000:87:00.1
+          sudo dpdk-devbind.py -b vfio-pci 0000:87:00.0 0000:87:00.1
+      - name: testpmd container prep
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          cd testpmd/
+          sudo podman build -t testpmd:ci --build-arg DPDK_VERSION=${{ needs.prepare-test-data.outputs.dpdk }} .
+          sudo podman images testpmd:ci
+          sudo podman run -d --rm -p 9000:9000 --name netgauge-testpmd --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices --cpuset-cpus 3,5,7 testpmd:ci --pci 0000:87:00.0 --pci 0000:87:00.1 --http-port 9000 --auto
+          sleep 20
+          curl localhost:9000/testpmd/status
+  e2e-test:
+    needs: [ prepare-test-data, dut-prep ]
+    runs-on: [self-hosted, trafficgen]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: trafficgen interface prep
+        run: |
+          sudo modprobe vfio-pci
+          sudo podman rmi -f trafficgen:ci 2>/dev/null
+          sudo dpdk-devbind.py -u 0000:5e:00.0 0000:5e:00.1
+          sudo dpdk-devbind.py -b vfio-pci 0000:5e:00.0 0000:5e:00.1
+      - name: trafficgen container prep
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          cd rfc2544/
+          sudo podman build -t trafficgen:ci --build-arg TREX_VERSION=${{ needs.prepare-test-data.outputs.trex }} .
+          sudo podman images trafficgen:ci
+          sudo podman run -d --rm -p 8080:8080 --name netgauge-trafficgen --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 -e pci_list=0000:5e:00.0,0000:5e:00.1 trafficgen:ci
+          sleep 10
+          sudo podman ps | grep netgauge-trafficgen
+          python3 client.py status --server-addr 127.0.0.1 --server-port 8080 --timeout 60
+      - name: trafficgen test
+        working-directory: ${{ github.workspace }}
+        run: |
+          cd rfc2544/
+          #warm up
+          python3 client.py start --server-addr 127.0.0.1 --server-port 8080 --timeout 60
+          sleep 60
+          python3 client.py stop --server-addr 127.0.0.1 --server-port 8080 --timeout 60
+          #actual rate measurement
+          python3 client.py auto --server-addr 127.0.0.1 --server-port 8080 --timeout 60 | tee result.json
+          rx_l1_bps=$(cat result.json | jq -r '.["0"].rx_l1_bps')
+          if (($(echo "${rx_l1_bps} < ${{ needs.prepare-test-data.outputs.bw }}" | bc -l))); then
+            echo "Traffic test failed. rx_l1_bps ${rx_l1_bps} was below rx_bw_limit ${{ needs.prepare-test-data.outputs.bw }}."
+            exit 1
+          else
+            echo "Traffic test passed. rx_l1_bps ${rx_l1_bps} was above rx_bw_limit ${{ needs.prepare-test-data.outputs.bw }}."
+          fi
+      - name: trafficgen cleanup
+        run: |
+          sudo podman rmi -f trafficgen:ci 2>/dev/null
+          sudo dpdk-devbind.py -u 0000:5e:00.0 0000:5e:00.1
+  dut-cleanup:
+    needs: [ e2e-test]
+    runs-on: [self-hosted, dut]
+    steps:
+      - name: dut cleanup
+        run: |
+          sudo podman rmi -f testpmd:ci 2>/dev/null
+          sudo dpdk-devbind.py -u 0000:87:00.0 0000:87:00.1
+      - name: Display Status
+        run: echo "This job's status is ${{ job.status }}."
