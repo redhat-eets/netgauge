@@ -104,5 +104,6 @@ jobs:
         run: |
           sudo podman rmi -f trafficgen:ci 2>/dev/null
           sudo dpdk-devbind.py -u 0000:87:00.0 0000:d8:00.0
+          sudo dpdk-devbind.py -b i40e 0000:87:00.0 0000:d8:00.0 0000:87:00.1 0000:d8:00.1
       - name: Display Status
         run: echo "This job's status is ${{ job.status }}."
