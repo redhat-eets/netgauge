@@ -61,7 +61,7 @@ Also note the isolated cpu list,
 
 If the isolated cpu list from the above command is empty, then [follow the prerequisites section](#Prerequisites) to fix it.
 
-Select 7 cores from the isolated cpu list and make sure the selected cores are from numa node 1. For example, here "5,7,9,11,13,15,17" could be used.
+Select 7 cores from the isolated cpu list and ensure that the selected cores are from numa node 1. For instance, the following cores "5,7,9,11,13,15,17" could be utilized. If hypertheading is enabled, the chosen CPUs must originate from distinct cores - meaning no silbing threads should be employed. The trafficgen script will detect whether silbing threads are included in a given cpu list and will utilize only one cpu from each core. To mitigate the problem of a "noisy neighbor", the user should ensure that the silbing threads of the selected CPUs cannot be utilized to run other applications as well.
 
 For manual test, users normally do not use pod, but run the trafficgen container directly,
 ```
