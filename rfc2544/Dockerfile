@@ -14,6 +14,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && python3 -m pip install --no-cache-dir marshmallow \
        && python3 -m pip install --no-cache-dir waitress \
        && python3 -m pip install --no-cache-dir requests \
+       && python3 -m pip install --no-cache-dir py-cputools \
        && mkdir -p /opt/trex \
        && mkdir -p /var/log/tgen \
        && mkdir -p /root/tgen \

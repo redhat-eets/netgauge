@@ -23,24 +23,6 @@ function print_help() {
     echo "debug - only start the trex server in foreground"
 }
 
-function convert_number_range() {
-    # converts a range of cpus, like "1-3,5" to a list, like "1,2,3,5"
-    local cpu_range=$1
-    local cpus_list=""
-    local cpus=""
-    for cpus in `echo "${cpu_range}" | sed -e 's/,/ /g'`; do
-        if echo "${cpus}" | grep -q -- "-"; then
-            cpus=`echo ${cpus} | sed -e 's/-/ /'`
-            cpus=`seq ${cpus} | sed -e 's/ /,/g'`
-        fi
-        for cpu in ${cpus}; do
-            cpus_list="${cpus_list},${cpu}"
-        done
-    done
-    cpus_list=`echo ${cpus_list} | sed -e 's/^,//'`
-    echo "${cpus_list}"
-}
-
 function sigfunc() {
     pid=`pgrep waitress-serve`
     [ -z ${pid} ] || kill ${pid}
@@ -114,8 +96,7 @@ cd /root/tgen
 #read -a pciArray <<< $(echo ${pci_list} | sed -e 's/,/ /g')
 export NIC1=${pciArray[0]}
 export NIC2=${pciArray[1]}
-isolated_cpus=$(cat /proc/self/status | grep Cpus_allowed_list: | cut -f 2)
-read -a cpuArray <<< $(convert_number_range ${isolated_cpus} | sed -e 's/,/ /g')
+read -a cpuArray <<< $(python -m cputools --remove-siblings)
 export master_cpu=${cpuArray[0]}
 export latency_cpu=${cpuArray[1]}
 #client_cpu is used to run binary search code
