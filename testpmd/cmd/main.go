@@ -42,7 +42,7 @@ func main() {
 	flag.Parse()
 	// if pci not specified on CLI, try enviroment vars
 	if len(pci) == 0 {
-		r, _ := regexp.Compile("PCIDEVICE")
+		r := regexp.MustCompile(`PCIDEVICE_OPENSHIFT_IO_INTELNICS\d+$`)
 		for _, e := range os.Environ() {
 			pair := strings.SplitN(e, "=", 2)
 			if r.Match([]byte(pair[0])) {
@@ -55,7 +55,7 @@ func main() {
 		log.Fatalf("pci address not provided\n")
 	}
 
-	cset := getProcCpuset()
+	cset := removeSiblings(getProcCpuset())
 	mgmt_cpu := firstCpuFromCpuset(cset)
 	var newMask unix.CPUSet
 	newMask.Set(mgmt_cpu)

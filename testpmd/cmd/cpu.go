@@ -1,9 +1,11 @@
 package main
 
 import (
-	"os"
+	"fmt"
 	"log"
+	"os"
 	"regexp"
+	"strings"
 
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
@@ -24,4 +26,30 @@ func getProcCpuset() cpuset.CPUSet {
 
 func firstCpuFromCpuset(cset cpuset.CPUSet) int {
 	return cset.List()[0]
+}
+
+func removeSiblings(cset cpuset.CPUSet) cpuset.CPUSet {
+	var cores []int
+	visited := make(map[int]int)
+	for _, cpu := range cset.List() {
+		if _, ok := visited[cpu]; ok {
+			continue
+		}
+		path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/topology/thread_siblings_list", cpu)
+		content, err := os.ReadFile(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		siblingSet, err := cpuset.Parse(strings.TrimRight(string(content), "\r\n"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		siblings := siblingSet.List()
+		cores = append(cores, siblings[0])
+		for _, sibling := range siblings {
+			visited[sibling] = 1
+		}
+	}
+	fmt.Printf("cpu list after removing siblings: %v\n", cores)
+	return cpuset.New(cores...)
 }
