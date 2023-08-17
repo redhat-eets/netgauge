@@ -17,10 +17,6 @@ To achieve higher traffic rate, the two trafficgen ports should come from differ
 
 In general using pysical function (PF) as the trafficgen ports can have better throughput performance than using the virtual function (VF). Building the container image based on TRex version 2.88 is recommended; the only exception is to use VF on Intel E810 nic as the trafficgen ports - in this case, building the container image based on TRex version 3.02 is recommended.
 
-## Openshift integration demo
-
-[![Watch the video](https://img.youtube.com/vi/C5s9DZC3D6c/maxresdefault.jpg)](https://youtu.be/C5s9DZC3D6c)
-
 ## Build the container image
 
 To build with the default TREX_VERSION,
@@ -30,7 +26,7 @@ podman build -t localhost/trafficgen .
 
 To build with a different TREX_VERSION, say for the purpose of running it on the virtual function on E810,
 ```
-podman build -t localhost/trafficgen --build-arg TREX_VERSION=3.02 .
+podman build -t localhost/trafficgen --build-arg TREX_VERSION=v3.02 .
 ```
 
 ## Bind trafficgen port to vfio-pci
@@ -65,7 +61,7 @@ Also note the isolated cpu list,
 
 If the isolated cpu list from the above command is empty, then [follow the prerequisites section](#Prerequisites) to fix it.
 
-Select 7 cores from the isolated cpu list and make sure the selected cores are from numa node 1. For example, here "5,7,9,11,13,15,17" could be used.
+Select 7 cores from the isolated cpu list and ensure that the selected cores are from numa node 1. For instance, the following cores "5,7,9,11,13,15,17" could be utilized. If hypertheading is enabled, the chosen CPUs must originate from distinct cores - meaning no silbing threads should be employed. The trafficgen script will detect whether silbing threads are included in a given cpu list and will utilize only one cpu from each core. To mitigate the problem of a "noisy neighbor", the user should ensure that the silbing threads of the selected CPUs cannot be utilized to run other applications as well.
 
 For manual test, users normally do not use pod, but run the trafficgen container directly,
 ```
