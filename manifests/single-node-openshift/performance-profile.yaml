@@ -2,8 +2,6 @@ apiVersion: performance.openshift.io/v2
 kind: PerformanceProfile
 metadata:
   name: performance
-  annotations:
-    kubeletconfig.experimental: "{\"cpuManagerPolicyOptions\": {\"full-pcpus-only\": \"true\"}}"
 spec:
   cpu:
     isolated: 4-31,36-63
@@ -16,8 +14,12 @@ spec:
   additionalKernelArgs:
   - iommu=pt
   - intel_iommu=on
-  - "rcupdate.rcu_normal_after_boot=0"
-  - "efi=runtime"
+  - nmi_watchdog=0
+  - audit=0
+  - mce=off
+  - processor.max_cstate=1
+  - idle=poll
+  - intel_idle.max_cstate=0
   machineConfigPoolSelector:
     pools.operator.machineconfiguration.openshift.io/master: "" 
   net:
@@ -25,6 +27,6 @@ spec:
   nodeSelector:
     node-role.kubernetes.io/master: ""
   numa:
-    topologyPolicy: restricted
+    topologyPolicy: "single-numa-node"
   realTimeKernel:
     enabled: false 
