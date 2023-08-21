@@ -1,0 +1,28 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-west
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: ""
+  capabilities: '{ "mac": true }'
+  resourceName: intelnics0
+  vlan: 100
+  spoofChk: "off"
+  trust: "on"
+  networkNamespace: default
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-east
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: ""
+  capabilities: '{ "mac": true }'
+  resourceName: intelnics1
+  vlan: 101
+  spoofChk: "off"
+  trust: "on"
+  networkNamespace: default
+
