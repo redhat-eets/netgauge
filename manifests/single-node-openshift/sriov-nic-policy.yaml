@@ -1,0 +1,35 @@
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-intel-west
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  mtu: 9000
+  nicSelector:
+    pfNames:
+    - "ens2f0"
+  nodeSelector:
+    node-role.kubernetes.io/master: "" 
+  numVfs: 2
+  priority: 5
+  resourceName: intelnics0
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-intel-east
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  mtu: 9000
+  nicSelector:
+    pfNames:
+    - "ens2f1"
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  numVfs: 2
+  priority: 5
+  resourceName: intelnics1
+
