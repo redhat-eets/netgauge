@@ -42,6 +42,11 @@ This generates an image size of 87M bytes.
 
 ## Bind testpmd ports to vfio-pci
 
+Important Note: If the VF (Virtual Function) ports are used as testpmd ports, it's required to disable MAC address spoofing while enabling MAC address trust. This can be achieved using the following command:
+```
+ip link set <PF> vf <n> spoof off trust on
+```
+
 Before running the testpmd container, the ports used by testpmd need to bind to vfio-pci. On a RHEL/Fedora system, one can install the RPM package `dpdk-tools` and then use `dpdk-devbind.py` to do the driver bind.
 ```
 modprobe vfio-pci
