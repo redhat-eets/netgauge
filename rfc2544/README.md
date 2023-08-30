@@ -31,6 +31,11 @@ podman build -t localhost/trafficgen --build-arg TREX_VERSION=v3.02 .
 
 ## Bind trafficgen port to vfio-pci
 
+Important Note: If the VF (Virtual Function) ports are used as trafficgen ports, it's required to disable MAC address spoofing while enabling MAC address trust. This can be achieved using the following command:
+```
+ip link set <PF> vf <n> spoof off trust on
+```
+
 Before running the trafficgen container, the trafficgen ports need to be bound to vfio-pci first. Assume the RPM package `dpdk-tools` is pre-installed on the system, and `dpdk-devbind.py` is available with this RPM install. Here is the steps to bind the ports to the vfio-pci,
 ```
 modprobe vfio-pci
