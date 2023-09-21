@@ -1,4 +1,4 @@
-FROM ubi8-minimal
+FROM ubi9-minimal
 ARG TREX_VER="v2.88"
 USER root
 
@@ -6,7 +6,7 @@ RUN microdnf install dpdk dpdk-tools \
        		pciutils which \
        		gcc python3 python3-devel \
        		net-tools util-linux rdma-core libibverbs \
-       		tmux gettext tar procps-ng
+       		tmux gettext tar procps-ng -y
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
        && python3 -m pip install --no-cache-dir --upgrade setuptools wheel \
        && python3 -m pip install --no-cache-dir psutil jsonschema \
