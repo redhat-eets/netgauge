@@ -1,8 +1,8 @@
-FROM ubi8-minimal
+FROM ubi9-minimal
 ARG TREX_VER="v2.88"
 USER root
 
-RUN microdnf install dpdk dpdk-tools \
+RUN microdnf install -y dpdk dpdk-tools \
        		pciutils which \
        		gcc python3 python3-devel \
        		net-tools util-linux rdma-core libibverbs \
