@@ -42,10 +42,10 @@ func main() {
 	flag.Parse()
 	// if pci not specified on CLI, try enviroment vars
 	if len(pci) == 0 {
-		r := regexp.MustCompile(`PCIDEVICE_OPENSHIFT_IO_INTELNICS\d+$`)
+		r := regexp.MustCompile(`PCIDEVICE_OPENSHIFT_IO_[A-Za-z0-9_]+$`)
 		for _, e := range os.Environ() {
 			pair := strings.SplitN(e, "=", 2)
-			if r.Match([]byte(pair[0])) {
+			if r.Match([]byte(pair[0])) && !strings.HasSuffix(pair[0], "_INFO") {
 				pci = append(pci, normalizePci(pair[1]))
 			}
 		}
