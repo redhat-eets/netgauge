@@ -1,0 +1,32 @@
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: hwlatdetect
+  labels:
+    app: hwlatdetect
+  namespace: benchmark 
+  annotations:
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+    irq-load-balancing.crio.io: "disable"
+spec:
+  runtimeClassName: performance-performance
+  restartPolicy: Never
+  containers:
+  - name: hwlatdetect 
+    image: quay.io/container-perf-tools/hwlatdetect
+    imagePullPolicy: Always
+    env:
+    - name: "RUNTIME_SECONDS"
+      value: "10"
+    resources:
+      limits:
+        cpu: "6"
+        memory: 1Gi 
+      requests:
+        cpu: "6"
+        memory: 1Gi 
+    securityContext:
+        privileged: true
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
