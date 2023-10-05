@@ -10,10 +10,16 @@ import socket
 import time
 import os
 from collections import defaultdict
+from typing import Iterable
 from prometheus_client import start_http_server
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from prometheus_client.core import REGISTRY, CounterMetricFamily
+from opentelemetry import metrics
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
 
 class DPDKTelemetry:
@@ -82,7 +88,7 @@ class SocketEventHandler(FileSystemEventHandler):
             print(f"DPDK application deleted: {app_name}")
             del self.socks[app_name]
 
-class TelemetryCollector(object):
+class PrometheusCollector(object):
     def __init__(self, sock_dict):
         self.socks = sock_dict
 
@@ -107,6 +113,17 @@ def initialize_sock_dict(dir, socks):
         # make sure full_path is a directory
         if os.path.isdir(full_path):
             socks[d] = DPDKTelemetry(full_path + "/dpdk_telemetry.v2")
+
+def cpu_time_callback(options: metrics.CallbackOptions) -> Iterable[metrics.Observation]:
+    observations = []
+    with open("/proc/stat") as procstat:
+        procstat.readline()  # skip the first line
+        for line in procstat:
+            if not line.startswith("cpu"): break
+            cpu, *states = line.split()
+            observations.append(metrics.Observation(int(states[0]) // 100, {"cpu": cpu, "state": "user"}))
+            break
+    return observations
 
 def main():
     sock_dict = dict()
@@ -146,7 +163,7 @@ def main():
         type=int,
         default=1,
         help="""
-        Collector backend choices, 1: prometheus.
+        Collector backend choices, 1: prometheus, 2: otlp.
         """
     )
     args = parser.parse_args()
@@ -160,7 +177,24 @@ def main():
 
     if args.backend == 1:
         start_http_server(args.port)
-        REGISTRY.register(TelemetryCollector(sock_dict))
+        REGISTRY.register(PrometheusCollector(sock_dict))
+    elif args.backend == 2:
+        resource = Resource(attributes={
+            SERVICE_NAME: "dpdk-telemetry"
+        })
+        reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(),
+            export_interval_millis=args.interval*1000
+        )
+        provider = MeterProvider(resource=resource, metric_readers=[reader])
+        metrics.set_meter_provider(provider)
+        meter = metrics.get_meter("dpdk.stats")
+        meter.create_observable_counter(
+            "system.cpu.time",
+            callbacks=[cpu_time_callback],
+            unit="s",
+            description="CPU time"
+        )
 
     # watch for sub-dir creation/deletion under sock_prefix
     # Create an observer and attach the event handler
