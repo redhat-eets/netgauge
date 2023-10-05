@@ -107,23 +107,27 @@ class PrometheusCollector(object):
                 e = f"{app}: {e}"
                 print(e)
 
+class OtlpCollector(object):
+    def __init__(self, sock_dict):
+        self.socks = sock_dict
+
+    def dpdk_telemetry_callback(self, options: metrics.CallbackOptions) -> Iterable[metrics.Observation]:
+        observations = []
+        for app, sock in self.socks.items():
+            ethdev_stats = sock.connect_and_get("/ethdev/stats")
+            for port, stats in ethdev_stats.items():
+                observations.append(metrics.Observation(int(stats["ibytes"]), {"app": app, "port": port, "stats": "ibytes"}))
+                observations.append(metrics.Observation(int(stats["ipackets"]), {"app": app, "port": port, "stats": "ipackets"}))
+                observations.append(metrics.Observation(int(stats["obytes"]), {"app": app, "port": port, "stats": "obytes"}))
+                observations.append(metrics.Observation(int(stats["opackets"]), {"app": app, "port": port, "stats": "opackets"}))
+        return observations
+
 def initialize_sock_dict(dir, socks):
     for d in os.listdir(dir):
         full_path = os.path.join(dir, d)
         # make sure full_path is a directory
         if os.path.isdir(full_path):
             socks[d] = DPDKTelemetry(full_path + "/dpdk_telemetry.v2")
-
-def cpu_time_callback(options: metrics.CallbackOptions) -> Iterable[metrics.Observation]:
-    observations = []
-    with open("/proc/stat") as procstat:
-        procstat.readline()  # skip the first line
-        for line in procstat:
-            if not line.startswith("cpu"): break
-            cpu, *states = line.split()
-            observations.append(metrics.Observation(int(states[0]) // 100, {"cpu": cpu, "state": "user"}))
-            break
-    return observations
 
 def main():
     sock_dict = dict()
@@ -145,7 +149,7 @@ def main():
         type=int,
         default=1,
         help="""
-        Time interval between each statistics sample.
+        Time interval between each statistics sample, not used for pull model backend.
         """,
     )
     parser.add_argument(
@@ -166,6 +170,14 @@ def main():
         Collector backend choices, 1: prometheus, 2: otlp.
         """
     )
+    parser.add_argument(
+        "--otlp-url",
+        type=str,
+        default="http://localhost:4317",
+        help="""
+        OTLP URL, required for OTLP backend, default to http://localhost:4317.
+        """
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.sock_prefix):
@@ -182,18 +194,21 @@ def main():
         resource = Resource(attributes={
             SERVICE_NAME: "dpdk-telemetry"
         })
+        insecure = False
+        if args.otlp_url.startswith("http://"):
+            insecure = True
         reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(),
+            OTLPMetricExporter(endpoint=args.otlp_url, insecure=insecure),
             export_interval_millis=args.interval*1000
         )
         provider = MeterProvider(resource=resource, metric_readers=[reader])
         metrics.set_meter_provider(provider)
         meter = metrics.get_meter("dpdk.stats")
+        otlp = OtlpCollector(sock_dict)
         meter.create_observable_counter(
-            "system.cpu.time",
-            callbacks=[cpu_time_callback],
-            unit="s",
-            description="CPU time"
+            "dpdk.stats",
+            callbacks=[otlp.dpdk_telemetry_callback],
+            description="DPDK Telemetry"
         )
 
     # watch for sub-dir creation/deletion under sock_prefix
