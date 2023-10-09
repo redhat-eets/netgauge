@@ -26,11 +26,9 @@ This agent uses this socket to aquire DPDK traffic metrics from DPDK application
 The DPDK telemetry agent can integrate with either Prometheus or OpenTelemetry collector as its backend.
 
 In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container, offering a scraping point for Prometheus.
-
 ![Agent deployed sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-prometheus-scraping.jpg?raw=true "Prometheus Scraping")
 
 In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container. It uses OTLP to exports the DPDK traffic metrics to the OpenTelemetry collector.
-
 ![Agent deployed sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-otlp.jpg?raw=true "Prometheus Scraping")
 
 
