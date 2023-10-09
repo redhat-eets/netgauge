@@ -50,18 +50,18 @@ class DPDKTelemetry:
         data = json.loads(self.sock.recv(1024).decode())
         self.max_out_len = data["max_output_len"]
         self.port_ids = self._cmd("/ethdev/list")["/ethdev/list"]
-        
+
     def _cmd(self, c):
         self.sock.send(c.encode())
         return json.loads(self.sock.recv(self.max_out_len))
-    
+
     def _assemble_from_ports(self, url):
         assembled_info = {}
         for i in self.port_ids:
             data = self._cmd(f"{url},{i}")
             assembled_info[i] = data[url]
         return assembled_info
-            
+
     def connect_and_get(self, url):
         try:
             if self.sock is None:
@@ -93,7 +93,7 @@ class PrometheusCollector(object):
         self.socks = sock_dict
 
     def collect(self):
-        for app, sock in self.socks.items(): 
+        for app, sock in self.socks.items():
             try:
                 count = CounterMetricFamily(app, "ethdev stats", labels=[app])
                 ethdev_stats = sock.connect_and_get("/ethdev/stats")

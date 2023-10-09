@@ -2,17 +2,17 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: testpmd 
+    app: testpmd
   name: testpmd
   namespace: benchmark
 spec:
   ports:
-  - port: 9000 
+  - port: 9000
     protocol: TCP
     targetPort: 9000
-    name: testpmd-rest-api 
+    name: testpmd-rest-api
   selector:
     app: testpmd
   sessionAffinity: None
-  type: NodePort 
+  type: NodePort
 

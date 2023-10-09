@@ -21,7 +21,7 @@ spec:
   - idle=poll
   - intel_idle.max_cstate=0
   machineConfigPoolSelector:
-    pools.operator.machineconfiguration.openshift.io/master: "" 
+    pools.operator.machineconfiguration.openshift.io/master: ""
   net:
     userLevelNetworking: true
   nodeSelector:
@@ -29,4 +29,4 @@ spec:
   numa:
     topologyPolicy: "single-numa-node"
   realTimeKernel:
-    enabled: false 
+    enabled: false

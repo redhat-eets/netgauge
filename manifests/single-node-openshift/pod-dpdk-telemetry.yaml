@@ -1,10 +1,10 @@
-apiVersion: v1 
-kind: Pod 
+apiVersion: v1
+kind: Pod
 metadata:
   name: dpdk-telemetry
   labels:
     app: dpdk-telemetry
-  namespace: benchmark 
+  namespace: benchmark
   annotations:
     k8s.v1.cni.cncf.io/networks: >
       [
@@ -39,11 +39,11 @@ spec:
     - name: dpdk
       emptyDir: {}
   containers:
-  - name: flexran-du 
+  - name: flexran-du
     image: quay.io/jianzzha/testpmd:22.11.2
     imagePullPolicy: Always
     volumeMounts:
-    - name: devpages 
+    - name: devpages
       mountPath: /dev/hugepages
     - name: vfio
       mountPath: /dev/vfio
@@ -58,13 +58,13 @@ spec:
       limits:
         cpu: "6"
         hugepages-1Gi: 2Gi
-        memory: 1Gi 
+        memory: 1Gi
         openshift.io/intelnics0: "1"
         openshift.io/intelnics1: "1"
       requests:
         cpu: "6"
         hugepages-1Gi: 2Gi
-        memory: 1Gi 
+        memory: 1Gi
         openshift.io/intelnics0: "1"
         openshift.io/intelnics1: "1"
     securityContext:
@@ -72,7 +72,7 @@ spec:
   - name: collector
     image: quay.io/container-perf-tools/dpdk-telemetry-collector
     imagePullPolicy: Always
-    command: ["/usr/bin/dpdk-telemetry.py"] 
+    command: ["/usr/bin/dpdk-telemetry.py"]
     args: ["--port", "9001"]
     ports:
       - containerPort: 9001
