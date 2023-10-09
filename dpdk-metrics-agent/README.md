@@ -4,7 +4,7 @@ The DPDK telemetry agent is designed to collect the DPDK traffic metrics where t
 
 ## DPDK telemetry API
 
-By default, every DPDK application creates a socket with the path <runtime_directory>/dpdk_telemetry.<version>, unless it is disabled during the application's build process. For more details, interested users are encouraged to refer to: https://doc.dpdk.org/guides/howto/telemetry.html.
+By default, every DPDK application creates a socket with the path `<runtime_directory>/dpdk_telemetry.<version>`, unless it is disabled during the application's build process. For more details, interested users are encouraged to refer to: https://doc.dpdk.org/guides/howto/telemetry.html.
 
 This agent uses this socket to aquire DPDK traffic metrics from DPDK applications. Through this socket, the agent can monitor a DPDK application's traffic metrics without the need for instrumenting the application.
 
