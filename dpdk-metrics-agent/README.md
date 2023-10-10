@@ -16,7 +16,7 @@ This agent uses this socket to aquire DPDK traffic metrics from DPDK application
 ## Agent command line options
 
 * --sock-prefix, DPDK telemetry socket directory
-* --port, prometheus scaping port
+* --port, prometheus scraping port
 * --backend, 1: prometheus, 2: open telemetry collector
 * --otlp-url, URL to the open telemetry collector GRPC endpoint
 * --interval, time interval in seconds for metric collection
