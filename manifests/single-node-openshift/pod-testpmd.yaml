@@ -40,7 +40,7 @@ spec:
       emptyDir: {}
   containers:
   - name: flexran-du
-    image: quay.io/jianzzha/testpmd:22.11.2
+    image: quay.io/container-perf-tools/testpmd:22.11.2
     imagePullPolicy: Always
     volumeMounts:
     - name: devpages
