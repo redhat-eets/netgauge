@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: testpmd
+  name: dpdk-telemetry
   labels:
-    app: testpmd
+    app: dpdk-telemetry
   namespace: benchmark
   annotations:
     k8s.v1.cni.cncf.io/networks: >
@@ -67,6 +67,18 @@ spec:
         memory: 1Gi
         openshift.io/intelnics0: "1"
         openshift.io/intelnics1: "1"
+    securityContext:
+        privileged: true
+  - name: collector
+    image: quay.io/container-perf-tools/dpdk-telemetry-collector
+    imagePullPolicy: Always
+    command: ["/usr/bin/dpdk-telemetry.py"]
+    args: ["--port", "9001"]
+    ports:
+      - containerPort: 9001
+    volumeMounts:
+    - name: dpdk
+      mountPath: /var/run/dpdk
     securityContext:
         privileged: true
   nodeSelector:

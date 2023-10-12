@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: testpmd
+  name: dpdk-telemetry-otlp
   labels:
-    app: testpmd
+    app: dpdk-telemetry-otlp
   namespace: benchmark
   annotations:
     k8s.v1.cni.cncf.io/networks: >
@@ -40,7 +40,7 @@ spec:
       emptyDir: {}
   containers:
   - name: flexran-du
-    image: quay.io/jianzzha/testpmd:22.11.2
+    image: quay.io/container-perf-tools/testpmd:22.11.2
     imagePullPolicy: Always
     volumeMounts:
     - name: devpages
@@ -67,6 +67,16 @@ spec:
         memory: 1Gi
         openshift.io/intelnics0: "1"
         openshift.io/intelnics1: "1"
+    securityContext:
+        privileged: true
+  - name: collector
+    image: quay.io/container-perf-tools/dpdk-telemetry-collector
+    imagePullPolicy: Always
+    command: ["/usr/bin/dpdk-telemetry.py"]
+    args: ["--backend=2", "--otlp-url=http://opentelemetry-collector.benchmark.svc.cluster.local:4317"]
+    volumeMounts:
+    - name: dpdk
+      mountPath: /var/run/dpdk
     securityContext:
         privileged: true
   nodeSelector:

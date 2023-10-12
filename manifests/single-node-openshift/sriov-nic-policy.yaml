@@ -11,7 +11,7 @@ spec:
     pfNames:
     - "ens2f0"
   nodeSelector:
-    node-role.kubernetes.io/master: "" 
+    node-role.kubernetes.io/master: ""
   numVfs: 2
   priority: 5
   resourceName: intelnics0
