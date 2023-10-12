@@ -1,12 +1,12 @@
 # DPDK Telemetry Agent
 
-The DPDK telemetry agent is designed to collect the DPDK traffic metrics where the kernel-based network metrics collecor cannot be applied.
+The DPDK telemetry agent is designed to collect the DPDK traffic metrics where the kernel-based network metrics collector cannot be applied.
 
 ## DPDK telemetry API
 
 By default, every DPDK application creates a socket with the path `<runtime_directory>/dpdk_telemetry.<version>`, unless it is disabled during the application's build process. For more details, interested users are encouraged to refer to: https://doc.dpdk.org/guides/howto/telemetry.html.
 
-This agent uses this socket to aquire DPDK traffic metrics from DPDK applications. Through this socket, the agent can monitor a DPDK application's traffic metrics without the need for instrumenting the application.
+This agent uses this socket to acquire DPDK traffic metrics from DPDK applications. Through this socket, the agent can monitor a DPDK application's traffic metrics without the need for instrumenting the application.
 
 ## Backend support
 
@@ -26,7 +26,7 @@ This agent uses this socket to aquire DPDK traffic metrics from DPDK application
 The DPDK telemetry agent can integrate with either Prometheus or OpenTelemetry collector as its backend.
 
 In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container, offering a scraping point for Prometheus.
-![Agent deployed sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-prometheus-scraping.jpg?raw=true "Prometheus Scraping")
+![Agent sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-prometheus-scraping.jpg?raw=true "Prometheus Scraping")
 
 For demonstration purposes, you can use the sample pod manifest file located at `manifests/single-node-openshift/pod-dpdk-telemetry.yaml` to start a sample pod with the telemetry agent as a sidecar. To allow Prometheus access to the sidecar, you'll need a service pointing to it. For simplicity, let's set up a node port service using the sample service manifest found at `manifests/single-node-openshift/service-dpdk-telemetry.yaml`. Once the sample pod and service are running, launch a Prometheus instance and configure it to scrape from the node port. Here is a sample Prometheus configuration for scraping data from the node port:
 ```
@@ -43,8 +43,8 @@ scrape_configs:
 
 In the provided Probemtheus configuration, the IP address `192.168.222.30:31264` corresponds to the node port defined in the service manifest.
 
-The DPDK telemetry agent can also integrate with an OpenTelemetry collector. In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container. It uses OTLP to exports the DPDK traffic metrics to the OpenTelemetry collector.
-![Agent deployed sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-otlp.jpg?raw=true "Prometheus Scraping")
+The DPDK telemetry agent can also integrate with an OpenTelemetry collector. In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container. It uses OTLP to export the DPDK traffic metrics to the OpenTelemetry collector.
+![Agent sidecar exporting metrics to a open telemetry collector](../diagrams/dpdk-telemetry-otlp.jpg?raw=true "Open Telemetry Collector")
 
 For demonstration purposes, you can use the sample configuration file located at `manifests/open-telemetry/otel-collector-config.yaml` to start an OpenTelemetry collector outside of the Kubernetes cluster using the following command:
 ```
