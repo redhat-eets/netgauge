@@ -7,7 +7,8 @@ metadata:
   namespace: benchmark
 spec:
   ports:
-  - port: 9001
+  - nodePort: 31264
+    port: 9001
     protocol: TCP
     targetPort: 9001
     name: dpdk-telemetry

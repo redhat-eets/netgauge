@@ -28,8 +28,67 @@ The DPDK telemetry agent can integrate with either Prometheus or OpenTelemetry c
 In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container, offering a scraping point for Prometheus.
 ![Agent deployed sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-prometheus-scraping.jpg?raw=true "Prometheus Scraping")
 
-In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container. It uses OTLP to exports the DPDK traffic metrics to the OpenTelemetry collector.
+For demonstration purposes, you can use the sample pod manifest file located at `manifests/single-node-openshift/pod-dpdk-telemetry.yaml` to start a sample pod with the telemetry agent as a sidecar. To allow Prometheus access to the sidecar, you'll need a service pointing to it. For simplicity, let's set up a node port service using the sample service manifest found at `manifests/single-node-openshift/service-dpdk-telemetry.yaml`. Once the sample pod and service are running, launch a Prometheus instance and configure it to scrape from the node port. Here is a sample Prometheus configuration for scraping data from the node port:
+```
+scrape_configs:
+  - job_name: "dpdk-telemetry"
+
+    scrape_interval: 5s
+
+    static_configs:
+      - targets: ['192.168.222.30:31264']
+        labels:
+          group: 'k8s-demo'
+```
+
+In the provided Probemtheus configuration, the IP address `192.168.222.30:31264` corresponds to the node port defined in the service manifest.
+
+The DPDK telemetry agent can also integrate with an OpenTelemetry collector. In the diagram below, the agent is deployed as a sidecar in the same pod alongside the DPDK application container. It uses OTLP to exports the DPDK traffic metrics to the OpenTelemetry collector.
 ![Agent deployed sidecar as a prometheus scraping point](../diagrams/dpdk-telemetry-otlp.jpg?raw=true "Prometheus Scraping")
+
+For demonstration purposes, you can use the sample configuration file located at `manifests/open-telemetry/otel-collector-config.yaml` to start an OpenTelemetry collector outside of the Kubernetes cluster using the following command:
+```
+podman run --rm -p 4317:4317 -v $PWD/manifests/open-telemetry/otel-collector-config.yaml:/etc/otel-collector-config.yaml otel/opentelemetry-collector:latest  --config=/etc/otel-collector-config.yaml
+```
+
+Next, utilize the sample pod manifest file located at `manifests/single-node-openshift/pod-dpdk-telemetry-otlp.yaml` to start a sample pod with the telemetry agent as a sidecar. When using this sample manifest file, don't forget to update the `--otlp-url` setting to point to your actual OpenTelemetry collector.
+
+The OpenTelemetry collector should generate console logs when the DPDK telemetry agent exports metrics to it. Sample logs might look like this:
+```
+StartTimestamp: 2023-10-12 14:39:59.956169198 +0000 UTC
+Timestamp: 2023-10-12 15:00:26.11248955 +0000 UTC
+Value: 712
+NumberDataPoints #4
+Data point attributes:
+     -> app: Str(testpmd)
+     -> port: Int(1)
+     -> stats: Str(ibytes)
+StartTimestamp: 2023-10-12 14:39:59.956169198 +0000 UTC
+Timestamp: 2023-10-12 15:00:26.11248955 +0000 UTC
+Value: 60068
+NumberDataPoints #5
+Data point attributes:
+     -> app: Str(testpmd)
+     -> port: Int(1)
+     -> stats: Str(ipackets)
+StartTimestamp: 2023-10-12 14:39:59.956169198 +0000 UTC
+Timestamp: 2023-10-12 15:00:26.11248955 +0000 UTC
+Value: 712
+NumberDataPoints #6
+Data point attributes:
+     -> app: Str(testpmd)
+     -> port: Int(1)
+     -> stats: Str(obytes)
+StartTimestamp: 2023-10-12 14:39:59.956169198 +0000 UTC
+Timestamp: 2023-10-12 15:00:26.11248955 +0000 UTC
+Value: 291853
+NumberDataPoints #7
+Data point attributes:
+     -> app: Str(testpmd)
+     -> port: Int(1)
+     -> stats: Str(opackets)
+```
+
 
 
 
