@@ -9,6 +9,8 @@ import json
 import socket
 import time
 import os
+import logging
+import signal
 from collections import defaultdict
 from typing import Iterable
 from prometheus_client import start_http_server
@@ -39,14 +41,14 @@ class DPDKTelemetry:
                 self.sock.close()
             except Exception as e:
                 e = f"{self.sock_path}: {e}"
-                print(f"Failed to close socket: {e}")
+                logging.warning(f"Failed to close socket: {e}")
             finally:
                 self.sock = None
 
     def _connect_socket(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
         self.sock.connect(self.sock_path)
-        print(f"Socket successfully connected to {self.sock_path}")
+        logging.info(f"Socket successfully connected to {self.sock_path}")
         data = json.loads(self.sock.recv(1024).decode())
         self.max_out_len = data["max_output_len"]
         self.port_ids = self._cmd("/ethdev/list")["/ethdev/list"]
@@ -69,7 +71,7 @@ class DPDKTelemetry:
             self.stats[url] = self._assemble_from_ports(url)
         except Exception as e:
             e = f"{self.sock_path}: {e}"
-            print(e)
+            logging.warning(e)
             self.stats = defaultdict(dict)
             self._close_sock()
         return self.stats[url]
@@ -80,12 +82,12 @@ class SocketEventHandler(FileSystemEventHandler):
     def on_created(self, event):
         if event.is_directory:
             app_name = os.path.basename(event.src_path)
-            print(f"New DPDK application created: {app_name}")
+            logging.info(f"New DPDK application created: {app_name}")
             self.socks[app_name] = DPDKTelemetry(event.src_path + "/dpdk_telemetry.v2")
     def on_deleted(self, event):
         if event.is_directory:
             app_name = os.path.basename(event.src_path)
-            print(f"DPDK application deleted: {app_name}")
+            logging.info(f"DPDK application deleted: {app_name}")
             del self.socks[app_name]
 
 class PrometheusCollector(object):
@@ -105,7 +107,7 @@ class PrometheusCollector(object):
                 yield count
             except Exception as e:
                 e = f"{app}: {e}"
-                print(e)
+                logging.warning(e)
 
 class OtlpCollector(object):
     def __init__(self, sock_dict):
@@ -130,6 +132,8 @@ def initialize_sock_dict(dir, socks):
             socks[d] = DPDKTelemetry(full_path + "/dpdk_telemetry.v2")
 
 def main():
+    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.WARNING)
     sock_dict = dict()
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -220,10 +224,18 @@ def main():
     # Start the observer
     observer.start()
 
+    def term_handler(signum, frame):
+        logging.info("SIGTERM detected, raise KeyboardInterrupt")
+        raise KeyboardInterrupt
+
+    # Setup SIGTERM handler
+    signal.signal(signal.SIGTERM, term_handler)
+
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
+        logging.info("Keyboardinterrupt detected")
         observer.stop()
 
     observer.join()
