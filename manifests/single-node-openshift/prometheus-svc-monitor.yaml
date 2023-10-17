@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: dpdk-telemetry
+  name: dpdk-telemetry
+  namespace: benchmark
+spec:
+  endpoints:
+  - interval: 5s
+    port: dpdk-telemetry
+    scheme: http
+  selector:
+    matchLabels:
+      app: dpdk-telemetry
+
