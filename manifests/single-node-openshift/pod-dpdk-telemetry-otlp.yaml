@@ -74,6 +74,13 @@ spec:
     imagePullPolicy: Always
     command: ["/usr/bin/dpdk-telemetry.py"]
     args: ["--backend=2", "--otlp-url=http://opentelemetry-collector.benchmark.svc.cluster.local:4317"]
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "300Mi"
+      requests:
+        cpu: "100m"
+        memory: "300Mi"
     volumeMounts:
     - name: dpdk
       mountPath: /var/run/dpdk

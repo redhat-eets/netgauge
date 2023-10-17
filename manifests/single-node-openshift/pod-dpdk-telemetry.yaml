@@ -76,6 +76,13 @@ spec:
     args: ["--port", "9001"]
     ports:
       - containerPort: 9001
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "300Mi"
+      requests:
+        cpu: "100m"
+        memory: "300Mi"
     volumeMounts:
     - name: dpdk
       mountPath: /var/run/dpdk
