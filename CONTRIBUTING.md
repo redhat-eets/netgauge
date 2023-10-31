@@ -91,9 +91,13 @@ Golang code is validated using [golangci-lint](https://golangci-lint.run/) Githu
 `cd testpmd
 golangci-lint run -D unused,errcheck -v`
 
-The optional "real" testing can be run by applying the "trafficgen-test" label to the Pull Request. This will start an action which queues a performance trafficgen test(s). Because these tests take both time and resources, they should only be started after the PR is ready to merge as a final check of functionality, and this label should only be utilized by repository maintainers. After the test run, check the results of the Actions workflows and rerun tests, if needed.
+The optional "real" rfc2544 trafficgen testing can be run by applying "trafficgen-test" label to a Pull Request. This will start an action which queues a performance trafficgen test. 
 
-"trafficgen-test" label triggers a performance test execution using 710-series NIC ports over the switch loopback. By default this test will pass if RX drop rate is less than 50%. Alternatively, "traffic-test-<RX drop %>" label can be used for custom RX drop rate limit performance test. For example, "trafficgen-test-10" will pass with RX drop rate below 10% of max L1 rate recorded for 25G link in this setup. Lebel-triggered performance test uses TREX version 2.88.
+"trafficgen-test" label triggers a performance test execution using 710-series NIC ports over the switch loopback. By default this test will pass if RX drop rate is less than 50%. Alternatively, "traffic-test-<RX drop %>" label can be used for custom RX drop rate limit performance test. For example, "trafficgen-test-10" will pass with RX drop rate below 10% of max L1 rate recorded for 25G link in this setup. Label-triggered performance test uses TREX version 2.88.
 
 Trafficgen-test workflow can also be triggered on demand on any selected branch using workflow_dispatch event trigger. That allows selecting 2.88 or 3.02 TREX version and entering acceptable RX line rate drop in % from max L1 rate for that interface. 
+
+Likewise, "e2e-testpmd" label will trigger an end-to-end test execution, covering both trafficgen and testpmd tools. These tools will run on two different servers, connected by back-to-back 25G links. This test uses DPDK version 21.11.2 (can be changed in case of on demand execution), TREX version 2.88 and minimum acceptable RX line rate of 9 Gbps on a 25G link.
+
+Because these tests take both time and resources, they should only be started after a PR is ready to merge as a final check of functionality. This label should only be utilized by repository maintainers. After the test run, check the results of the Actions workflows and rerun tests, if needed.
 
