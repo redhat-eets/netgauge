@@ -45,7 +45,7 @@ func removeSiblings(cset cpuset.CPUSet) cpuset.CPUSet {
 			log.Fatal(err)
 		}
 		siblings := siblingSet.List()
-		cores = append(cores, siblings[0])
+		cores = append(cores, cpu)
 		for _, sibling := range siblings {
 			visited[sibling] = 1
 		}
