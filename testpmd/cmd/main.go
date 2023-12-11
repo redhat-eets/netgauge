@@ -31,6 +31,28 @@ func (p *pciArray) Set(value string) error {
 	return nil
 }
 
+func parsePCIPatterns(patternStr string) []string {
+	// Split the comma-separated patterns
+	patterns := strings.Split(patternStr, ",")
+
+	// Trim any leading or trailing whitespaces from each pattern
+	for i, pattern := range patterns {
+		patterns[i] = strings.TrimSpace(pattern)
+	}
+
+	return patterns
+}
+
+func getPCIList(pci *pciArray, pattern string) {
+	r := regexp.MustCompile(pattern)
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		if r.Match([]byte(pair[0])) && !strings.HasSuffix(pair[0], "_INFO") {
+			*pci = append(*pci, normalizePci(pair[1]))
+		}
+	}
+}
+
 func main() {
 	httpPort := flag.Int("http-port", 9000, "http port")
 	autoStart := flag.Bool("auto", false, "auto start in io mode")
@@ -38,16 +60,22 @@ func main() {
 	ring := flag.Int("ring-size", 2048, "ring size")
 	var pci pciArray
 	flag.Var(&pci, "pci", "pci address, can specify multiple times")
+	pciPatternStr := flag.String("pci-pattern", "", "comma-separated list of patterns used to identify PCI slots")
 	testpmdPath := flag.String("testpmd-path", "testpmd", "if not in PATH, specify the testpmd location")
 	flag.Parse()
 	// if pci not specified on CLI, try enviroment vars
 	if len(pci) == 0 {
-		r := regexp.MustCompile(`PCIDEVICE_OPENSHIFT_IO_[A-Za-z0-9_]+$`)
-		for _, e := range os.Environ() {
-			pair := strings.SplitN(e, "=", 2)
-			if r.Match([]byte(pair[0])) && !strings.HasSuffix(pair[0], "_INFO") {
-				pci = append(pci, normalizePci(pair[1]))
+		pciPatterns := parsePCIPatterns(*pciPatternStr)
+		if len(pciPatterns) > 0 {
+			for _, pattern := range pciPatterns {
+				upperPattern := strings.ToUpper(pattern)
+				if !strings.HasPrefix(upperPattern, "PCIDEVICE_OPENSHIFT_IO_") {
+					upperPattern = "PCIDEVICE_OPENSHIFT_IO_" + upperPattern
+				}
+				getPCIList(&pci, upperPattern)
 			}
+		} else {
+			getPCIList(&pci, `PCIDEVICE_OPENSHIFT_IO_[A-Za-z0-9_]+$`)
 		}
 	}
 	// if still have no pci info, then exit
