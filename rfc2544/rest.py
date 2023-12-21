@@ -103,11 +103,11 @@ class RestApi:
         if checkIfProcessRunning("binary-search"):
             if not killProcessByName("binary-search"):
                 return jsonify(False)
+
         start_schema = StartSchema()
-        result = start_schema.load(request_data)
-        if result["l3"]:
+        if request_data["l3"]:
             start_schema = StartSchemal3()
-            result = start_schema.load(request_data)
+        result = start_schema.load(request_data)
 
         binary_search_command = ["./binary-search.py", "--traffic-generator=trex-txrx"]
         for field in result:
