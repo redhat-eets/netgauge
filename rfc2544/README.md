@@ -26,7 +26,7 @@ podman build -t localhost/trafficgen .
 
 To build with a different TREX_VERSION, say for the purpose of running it on the virtual function on E810,
 ```
-podman build -t localhost/trafficgen --build-arg TREX_VERSION=v3.02 .
+podman build -t localhost/trafficgen --build-arg TREX_VER=v3.02 .
 ```
 
 ## Bind trafficgen port to vfio-pci
@@ -106,10 +106,19 @@ podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci
 
 If users do not want to emulate the pod, they may choose to directly start the trafficgen container without using a pod,
 ```
-podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 --pod trafficgen -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen
 ```
 
 Note: in the above example, the cpuset is from numa node 0. This is because the trafficgen ports used in this example are associated with numa node 0.
+
+Upon initiating the trafficgen container as described above, it enters a state of readiness, awaiting a REST API request. If the objective is to commence an RFC2544 binary search run without being contingent on a REST API request,
+```
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 -e pci_list=0000:18:00.0,0000:18:00.1 localhost/trafficgen start
+```
+
+Instead of employing a binary search methodology to determine the sustainable maximum throughput, one may specify a consistent throughput for a predefined duration (it is recommended that this duration not exceed 1800 seconds),
+podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 -e pci_list=0000:18:00.0,0000:18:00.1 -e one_shot=1 -e validation_runtime=100 localhost/trafficgen start
+
 
 ## Trafficgen REST API
 

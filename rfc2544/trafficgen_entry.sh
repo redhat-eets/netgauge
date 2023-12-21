@@ -9,6 +9,7 @@ flows=${flows:-1024}
 frame_size=${frame_size:-64}
 rate=${rate:-25}
 steady_rate=${steady_rate:-0}
+steady_rate=${one_shot:-${steady_rate}}
 page_prefix="rfc2544_trex"
 pciDeviceDir="/sys/bus/pci/devices"
 vf_extra_opt=${vf_extra_opt:-"--no-promisc"}
