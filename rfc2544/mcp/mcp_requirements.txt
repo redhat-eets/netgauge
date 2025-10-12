@@ -1,6 +1,0 @@
-# MCP Server dependencies for RFC2544
-mcp>=1.0.0
-httpx>=0.25.0
-fastapi>=0.100.0
-uvicorn>=0.20.0
-asyncio
