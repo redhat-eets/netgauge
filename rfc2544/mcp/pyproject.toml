@@ -1,0 +1,23 @@
+[project]
+name = "rfc2544-mcp"
+version = "1.0.0"
+description = "MCP Server for RFC2544 Traffic Generator Management"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=0.9.0",
+    "httpx>=0.25.0",
+]
+
+[project.scripts]
+rfc2544-mcp = "rfc2544_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]

@@ -1,6 +1,6 @@
 # RFC2544 MCP Server
 
-This directory contains an MCP (Model Context Protocol) server for managing the RFC2544 traffic generator. The MCP server provides tools to interact with the RFC2544 REST API through a standardized interface.
+A Model Context Protocol (MCP) server for managing RFC2544 traffic generators using FastMCP.
 
 ## Features
 
@@ -10,46 +10,71 @@ The MCP server provides the following tools:
 2. **check_trafficgen_status** - Check if the traffic generator is currently running
 3. **get_trafficgen_results** - Get test results if available
 4. **check_results_available** - Check if test results are available
+5. **get_mac_addresses** - Get MAC addresses from the traffic generator
 
 ## Installation
 
-1. Install the required dependencies:
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management and running.
+
+### Prerequisites
+
+1. Install uv:
 ```bash
-pip install -r mcp_requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 2. Make sure the RFC2544 traffic generator is running and accessible via its REST API (typically on `localhost:8080`).
+
+### Setup
+
+1. Install dependencies:
+```bash
+uv sync
+```
+
+2. Activate the virtual environment:
+```bash
+source .venv/bin/activate
+```
 
 ## Usage
 
 ### Running the MCP Server
 
-The MCP server can be run directly:
-
+#### Using uv run (Recommended)
 ```bash
-python3 mcp_server.py
+# Run with default settings
+uv run rfc2544-mcp
+
+# Run on custom port
+uv run rfc2544-mcp --port 8090
+
+# Run on custom host and port
+uv run rfc2544-mcp --host 0.0.0.0 --port 8090
 ```
 
-### Configuration
+#### Using the installed script
+After installation, you can run:
+```bash
+rfc2544-mcp --port 8090
+```
 
-The server can be configured by modifying the default values in `mcp_server.py`:
-
-- `DEFAULT_SERVER_ADDR`: RFC2544 server address (default: "localhost")
-- `DEFAULT_SERVER_PORT`: RFC2544 server port (default: 8080)
+#### Direct Python execution
+```bash
+uv run python -m rfc2544_mcp
+```
 
 ### MCP Client Configuration
 
-To use this MCP server with an MCP client, add the following configuration to your MCP client config:
+To use this MCP server with an MCP client, add the following configuration:
 
 ```json
 {
   "mcpServers": {
     "rfc2544": {
-      "command": "python3",
-      "args": ["/path/to/rfc2544/mcp_server.py"],
-      "env": {
-        "PYTHONPATH": "/path/to/rfc2544"
-      }
+      "command": "uv",
+      "args": ["run", "rfc2544-mcp", "--port", "8090"],
+      "cwd": "/path/to/rfc2544/mcp"
     }
   }
 }
@@ -64,13 +89,21 @@ All tools accept the following optional parameters:
 
 ## Testing
 
+### Unit Testing
 Run the test script to verify the MCP server functionality:
 
 ```bash
-python3 test_mcp_server.py
+uv run python test_fastmcp.py
 ```
 
 This will test all the MCP server tools against the RFC2544 REST API.
+
+### Development Testing
+For development, you can also run the server in development mode:
+
+```bash
+uv run --dev rfc2544-mcp
+```
 
 ## Tool Descriptions
 
@@ -118,6 +151,16 @@ Checks if test results are available by calling the `/result/available` endpoint
 
 **Returns:** Message indicating if results are available
 
+### get_mac_addresses
+
+Gets MAC addresses from the traffic generator by calling the `/maclist` endpoint.
+
+**Parameters:**
+- `server_addr` (optional): RFC2544 server address
+- `server_port` (optional): RFC2544 server port
+
+**Returns:** Comma-separated list of MAC addresses
+
 ## Error Handling
 
 The MCP server includes comprehensive error handling for:
@@ -131,9 +174,9 @@ All errors are returned as error messages in the tool response.
 
 ## Dependencies
 
-- `mcp`: Model Context Protocol library
+- `fastmcp`: FastMCP framework for building MCP servers
 - `httpx`: HTTP client library for async requests
-- `asyncio`: Python async I/O library
+- `uv`: Modern Python package manager and project runner
 
 ## Integration with RFC2544
 
@@ -145,3 +188,42 @@ The server communicates with the following RFC2544 REST endpoints:
 - `GET /trafficgen/stop` - Stop the traffic generator
 - `GET /result/available` - Check if results are available
 - `GET /result` - Get test results
+- `GET /maclist` - Get MAC addresses
+
+## Development
+
+### Project Structure
+
+```
+mcp/
+├── src/
+│   └── rfc2544_mcp/
+│       ├── __init__.py
+│       ├── server.py          # Main FastMCP server implementation
+│       ├── cli.py             # CLI interface
+│       └── __main__.py        # Package entry point
+├── test_fastmcp.py           # Test script
+├── pyproject.toml            # Project configuration
+└── README.md                 # This file
+```
+
+### Adding New Tools
+
+To add new tools to the MCP server:
+
+1. Add a new function decorated with `@mcp.tool()` in `src/rfc2544_mcp/server.py`
+2. Follow the existing pattern for parameter handling and error management
+3. Update this README with the new tool description
+4. Add tests for the new tool
+
+### Building and Publishing
+
+To build the package:
+```bash
+uv build
+```
+
+To publish to PyPI (if needed):
+```bash
+uv publish
+```

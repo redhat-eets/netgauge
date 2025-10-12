@@ -1,33 +1,21 @@
 #!/usr/bin/env python3
 """
-MCP Server for RFC2544 Traffic Generator Management
+HTTP MCP Server for RFC2544 Traffic Generator Management
 
-This MCP server provides tools to manage the RFC2544 traffic generator:
-- Stop the traffic generator
-- Check the traffic generator running state
-- Get results if available
-
-The server communicates with the RFC2544 REST API to perform these operations.
+This server provides HTTP endpoints for the RFC2544 MCP tools, allowing
+clients to access the MCP server functionality via HTTP requests.
 """
 
 import asyncio
 import json
 import logging
-import sys
 from typing import Any, Dict, List, Optional
 
 import httpx
-from mcp.server import Server
-from mcp.server.models import InitializationOptions
-from mcp.server.stdio import stdio_server
-from mcp.types import (
-    CallToolRequest,
-    CallToolResult,
-    ListToolsRequest,
-    ListToolsResult,
-    TextContent,
-    Tool,
-)
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+import uvicorn
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,18 +25,46 @@ logger = logging.getLogger(__name__)
 DEFAULT_SERVER_ADDR = "localhost"
 DEFAULT_SERVER_PORT = 8080
 
-# Create the MCP server instance
-server = Server("rfc2544-mcp-server")
+# Create FastAPI app
+app = FastAPI(
+    title="RFC2544 MCP Server",
+    description="HTTP interface for RFC2544 traffic generator management",
+    version="1.0.0"
+)
 
 
-@server.list_tools()
-async def list_tools() -> ListToolsResult:
+class ToolCallRequest(BaseModel):
+    name: str
+    arguments: Optional[Dict[str, Any]] = {}
+
+
+class ToolCallResponse(BaseModel):
+    content: List[Dict[str, str]]
+    isError: bool = False
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with server information."""
+    return {
+        "name": "RFC2544 MCP Server",
+        "version": "1.0.0",
+        "description": "HTTP interface for RFC2544 traffic generator management",
+        "endpoints": {
+            "list_tools": "GET /tools/list",
+            "call_tool": "POST /tools/call"
+        }
+    }
+
+
+@app.get("/tools/list")
+async def list_tools():
     """List available tools."""
     tools = [
-        Tool(
-            name="stop_trafficgen",
-            description="Stop the RFC2544 traffic generator",
-            inputSchema={
+        {
+            "name": "stop_trafficgen",
+            "description": "Stop the RFC2544 traffic generator",
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "server_addr": {
@@ -63,11 +79,11 @@ async def list_tools() -> ListToolsResult:
                     }
                 }
             }
-        ),
-        Tool(
-            name="check_trafficgen_status",
-            description="Check if the RFC2544 traffic generator is running",
-            inputSchema={
+        },
+        {
+            "name": "check_trafficgen_status",
+            "description": "Check if the RFC2544 traffic generator is running",
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "server_addr": {
@@ -82,11 +98,11 @@ async def list_tools() -> ListToolsResult:
                     }
                 }
             }
-        ),
-        Tool(
-            name="get_trafficgen_results",
-            description="Get RFC2544 test results if available",
-            inputSchema={
+        },
+        {
+            "name": "get_trafficgen_results",
+            "description": "Get RFC2544 test results if available",
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "server_addr": {
@@ -101,11 +117,11 @@ async def list_tools() -> ListToolsResult:
                     }
                 }
             }
-        ),
-        Tool(
-            name="check_results_available",
-            description="Check if RFC2544 test results are available",
-            inputSchema={
+        },
+        {
+            "name": "check_results_available",
+            "description": "Check if RFC2544 test results are available",
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "server_addr": {
@@ -120,15 +136,15 @@ async def list_tools() -> ListToolsResult:
                     }
                 }
             }
-        )
+        }
     ]
     
-    return ListToolsResult(tools=tools)
+    return {"tools": tools}
 
 
-@server.call_tool()
-async def call_tool(request: CallToolRequest) -> CallToolResult:
-    """Handle tool calls."""
+@app.post("/tools/call", response_model=ToolCallResponse)
+async def call_tool(request: ToolCallRequest):
+    """Call a tool with the given arguments."""
     tool_name = request.name
     arguments = request.arguments or {}
     
@@ -147,16 +163,16 @@ async def call_tool(request: CallToolRequest) -> CallToolResult:
         elif tool_name == "check_results_available":
             result = await check_results_available(base_url)
         else:
-            raise ValueError(f"Unknown tool: {tool_name}")
+            raise HTTPException(status_code=400, detail=f"Unknown tool: {tool_name}")
         
-        return CallToolResult(
-            content=[TextContent(type="text", text=result)]
+        return ToolCallResponse(
+            content=[{"type": "text", "text": result}]
         )
         
     except Exception as e:
         logger.error(f"Error calling tool {tool_name}: {e}")
-        return CallToolResult(
-            content=[TextContent(type="text", text=f"Error: {str(e)}")],
+        return ToolCallResponse(
+            content=[{"type": "text", "text": f"Error: {str(e)}"}],
             isError=True
         )
 
@@ -269,23 +285,23 @@ async def check_results_available(base_url: str) -> str:
             raise Exception(f"HTTP error from RFC2544 server: {e}")
 
 
-async def main():
-    """Main entry point for the MCP server."""
-    # Run the server using stdio transport
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="rfc2544-mcp-server",
-                server_version="1.0.0",
-                capabilities=server.get_capabilities(
-                    notification_options=None,
-                    experimental_capabilities=None,
-                ),
-            ),
-        )
+def main():
+    """Main entry point for the HTTP MCP server."""
+    import sys
+    
+    # Parse command line arguments
+    port = 8090
+    if len(sys.argv) > 1:
+        try:
+            port = int(sys.argv[1])
+        except ValueError:
+            logger.error(f"Invalid port number: {sys.argv[1]}")
+            sys.exit(1)
+    
+    logger.info(f"Starting RFC2544 HTTP MCP Server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
+
