@@ -3,6 +3,7 @@
 FastMCP Server for RFC2544 Traffic Generator Management
 
 This FastMCP server provides tools to manage the RFC2544 traffic generator:
+- Start the traffic generator with configurable parameters
 - Stop the traffic generator
 - Check the traffic generator running state
 - Get results if available
@@ -191,6 +192,148 @@ async def check_results_available(
                 return "Test results are available"
             else:
                 return "Test results are not available"
+                
+        except httpx.RequestError as e:
+            raise Exception(f"Failed to connect to RFC2544 server: {e}")
+        except httpx.HTTPStatusError as e:
+            raise Exception(f"HTTP error from RFC2544 server: {e}")
+
+
+@mcp.tool()
+async def start_trafficgen(
+    l3: bool = False,
+    device_pairs: str = "0:1",
+    search_runtime: int = 10,
+    validation_runtime: int = 30,
+    num_flows: int = 1000,
+    frame_size: int = 64,
+    max_loss_pct: float = 0.002,
+    sniff_runtime: int = 10,
+    search_granularity: float = 5.0,
+    server_addr: str = DEFAULT_SERVER_ADDR,
+    server_port: int = DEFAULT_SERVER_PORT,
+    active_device_pairs: Optional[str] = None,
+    traffic_direction: Optional[str] = None,
+    rate_tolerance_failure: Optional[str] = None,
+    duplicate_packet_failure: Optional[str] = None,
+    negative_packet_loss: Optional[str] = None,
+    send_teaching_warmup: Optional[bool] = True,
+    teaching_warmup_packet_type: Optional[str] = "generic",
+    teaching_warmup_packet_rate: Optional[int] = 10000,
+    use_src_ip_flows: Optional[int] = 1,
+    use_dst_ip_flows: Optional[int] = 1,
+    use_src_mac_flows: Optional[int] = 0,
+    use_dst_mac_flows: Optional[int] = 0,
+    rate_unit: Optional[str] = "%",
+    rate: Optional[int] = 50,
+    one_shot: Optional[int] = 0,
+    rate_tolerance: Optional[int] = 10,
+    runtime_tolerance: Optional[int] = 10,
+    no_promisc: Optional[bool] = True,
+    binary_search_extra_args: Optional[List[str]] = None,
+    dst_macs: Optional[str] = None
+) -> str:
+    """Start the RFC2544 traffic generator with specified parameters.
+    
+    Args:
+        l3: Whether to use L3 mode (True) or L2 mode (False) (default: False)
+        device_pairs: Device pairs configuration (default: "0,1")
+        search_runtime: Search runtime in seconds (default: 10)
+        validation_runtime: Validation runtime in seconds (default: 30)
+        num_flows: Number of flows to generate (default: 1000)
+        frame_size: Frame size in bytes (default: 64)
+        max_loss_pct: Maximum packet loss percentage (default: 0.002)
+        sniff_runtime: Sniff runtime in seconds (default: 10)
+        search_granularity: Search granularity value (default: 5.0)
+        server_addr: RFC2544 server address (default: localhost)
+        server_port: RFC2544 server port (default: 8080)
+        active_device_pairs: Active device pairs (optional)
+        traffic_direction: Traffic direction (optional)
+        rate_tolerance_failure: Rate tolerance failure setting (optional)
+        duplicate_packet_failure: Duplicate packet failure setting (optional)
+        negative_packet_loss: Negative packet loss setting (optional)
+        send_teaching_warmup: Send teaching warmup packets (optional)
+        teaching_warmup_packet_type: Teaching warmup packet type (optional)
+        teaching_warmup_packet_rate: Teaching warmup packet rate (optional)
+        use_src_ip_flows: Use source IP flows (0 or 1, default: 1)
+        use_dst_ip_flows: Use destination IP flows (0 or 1, default: 1)
+        use_src_mac_flows: Use source MAC flows (0 or 1, default: 0)
+        use_dst_mac_flows: Use destination MAC flows (0 or 1, default: 0)
+        rate_unit: Rate unit (optional)
+        rate: Rate value (optional)
+        one_shot: One shot value (optional)
+        rate_tolerance: Rate tolerance (optional)
+        runtime_tolerance: Runtime tolerance (optional)
+        no_promisc: Disable promiscuous mode (optional)
+        binary_search_extra_args: Extra arguments for binary search (optional)
+        dst_macs: Destination MAC addresses (required for L3 mode)
+    
+    Returns:
+        Success or failure message
+    """
+    base_url = f"http://{server_addr}:{server_port}"
+    
+    # Build the request payload
+    payload = {
+        "l3": l3,
+        "device_pairs": device_pairs,
+        "search_runtime": search_runtime,
+        "validation_runtime": validation_runtime,
+        "num_flows": num_flows,
+        "frame_size": frame_size,
+        "max_loss_pct": max_loss_pct,
+        "sniff_runtime": sniff_runtime,
+        "search_granularity": search_granularity
+    }
+    
+    # Add optional parameters if provided
+    optional_params = {
+        "active_device_pairs": active_device_pairs,
+        "traffic_direction": traffic_direction,
+        "rate_tolerance_failure": rate_tolerance_failure,
+        "duplicate_packet_failure": duplicate_packet_failure,
+        "negative_packet_loss": negative_packet_loss,
+        "send_teaching_warmup": send_teaching_warmup,
+        "teaching_warmup_packet_type": teaching_warmup_packet_type,
+        "teaching_warmup_packet_rate": teaching_warmup_packet_rate,
+        "use_src_ip_flows": use_src_ip_flows,
+        "use_dst_ip_flows": use_dst_ip_flows,
+        "use_src_mac_flows": use_src_mac_flows,
+        "use_dst_mac_flows": use_dst_mac_flows,
+        "rate_unit": rate_unit,
+        "rate": rate,
+        "one_shot": one_shot,
+        "rate_tolerance": rate_tolerance,
+        "runtime_tolerance": runtime_tolerance,
+        "no_promisc": no_promisc,
+        "binary_search_extra_args": binary_search_extra_args
+    }
+    
+    # Add optional parameters that are not None
+    for key, value in optional_params.items():
+        if value is not None:
+            # Convert boolean flow parameters to integers as expected by the REST API
+            if key in ["use_src_ip_flows", "use_dst_ip_flows", "use_src_mac_flows", "use_dst_mac_flows"]:
+                payload[key] = int(value)
+            else:
+                payload[key] = value
+    
+    # Add dst_macs for L3 mode
+    if l3 and dst_macs is not None:
+        payload["dst_macs"] = dst_macs
+    elif l3 and dst_macs is None:
+        raise Exception("dst_macs is required when l3=True")
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"{base_url}/trafficgen/start", json=payload)
+            response.raise_for_status()
+            result = response.json()
+            
+            if result:
+                return "Traffic generator started successfully"
+            else:
+                return "Failed to start traffic generator"
                 
         except httpx.RequestError as e:
             raise Exception(f"Failed to connect to RFC2544 server: {e}")
