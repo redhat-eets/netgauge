@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "rfc2544-trafficgen": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp[cli]",
+        "mcp",
+        "run",
+        "/home/jianzzha/code/netgauge/mcp/rfc2544_mcp/server.py"
+      ],
+      "env": {}
+    }
+  }
+}
