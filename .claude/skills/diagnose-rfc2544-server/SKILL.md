@@ -1,11 +1,25 @@
 ---
-name: run-rfc2544-test
-description: provide guideline on how to run the rfc2544 traffic generator with the proper kernel and nic device settings
+name: diagnose-rfc2544-server
+description: >
+  Diagnoses if a remote Linux server is ready to run rfc2544 trafficgen. Invoke automatically when user says anything like: "prepare", "diagnose", 
+  "check the server", "inspect", "what's wrong with", "troubleshoot", "is the server ready", or mentions a server address like user@host.
+  Do not ask for permission before running.
+allowed-tools: Bash(ssh:*)
+argument-hint: [user@host]
+disable-model-invocation: false
 ---
 
-# RFC2544 Performance Test Trafficgen
+Diagnose the server provided in: $ARGUMENTS
 
-RFC2544 performance testing evaluates a system's performance when running DPDK workloads.
+Before doing anything, check if $ARGUMENTS contains a valid user@host format.
+
+If $ARGUMENTS is empty or missing the user@host:
+- Ask the user: "Please provide the server to diagnose (e.g. deploy@192.168.1.1)"
+- Wait for their response before proceeding
+
+Once you have user@host, ssh into the server for information collection before provide solution. 
+
+# How to run RFC2544 Trafficgen
 
 When the user asks how to run an RFC2544 test, guide them through the following steps based on their setup.
 
@@ -116,79 +130,4 @@ podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci
 For constant throughput (max 1800 seconds):
 ```
 podman run -d --rm --privileged -v /dev/hugepages:/dev/hugepages -v /sys/bus/pci/devices:/sys/bus/pci/devices -v /lib/modules:/lib/modules --cpuset-cpus 4,6,8,10,12,14,16 -e pci_list=0000:18:00.0,0000:18:00.1 -e one_shot=1 -e validation_runtime=100 localhost/trafficgen start
-```
-
-## REST API
-
-The trafficgen exposes a REST API on port 8080 for automation control.
-
-### Endpoints
-
-**Check if running:**
-```
-curl -v http://[IP]:8080/trafficgen/running
-```
-
-**Start trafficgen (POST with JSON body):**
-```
-curl -X POST http://[IP]:8080/trafficgen/start -H 'Content-Type: application/json' -d '{
-    "l3":false,
-    "device_pairs":"0:1",
-    "search_runtime": 10,
-    "validation_runtime":30,
-    "num_flows":1000,
-    "frame_size":64,
-    "max_loss_pct":0.002,
-    "sniff_runtime":10,
-    "search_granularity":5.0,
-    "teaching_warmup_packet_type":"generic",
-    "teaching_warmup_packet_rate":10000,
-    "use_src_ip_flows":1,
-    "use_dst_ip_flows":1,
-    "use_src_mac_flows":0,
-    "use_dst_mac_flows":0,
-    "send_teaching_warmup": true,
-    "rate_tolerance": 10,
-    "runtime_tolerance": 10,
-    "rate": 50,
-    "rate_unit": "%",
-    "no_promisc": true
-}'
-```
-
-**Stop trafficgen:**
-```
-curl -v http://[IP]:8080/trafficgen/stop
-```
-
-**Check if results are available:**
-```
-curl -v http://[IP]:8080/result/available
-```
-
-**Get results:**
-```
-curl -v http://[IP]:8080/result
-```
-
-**Get MAC addresses:**
-```
-curl -v http://[IP]:8080/maclist
-```
-
-## REST API Client
-
-The `client.py` script provides CLI modes for interacting with the trafficgen REST API. All modes require `--server-addr` and `--server-port`.
-
-**Modes:**
-- `start` — Start the trafficgen
-- `stop` — Stop the trafficgen
-- `status` — Check trafficgen and result status
-- `get-result` — Retrieve test results
-- `get-mac` — Get MAC address list
-- `auto` — Automatically run test, wait for results, print JSON report to stdout (supports `--timeout` and `--config` for overrides via YAML)
-
-Example:
-```
-python3 client.py auto --server-addr 10.88.0.88 --server-port 8080
 ```

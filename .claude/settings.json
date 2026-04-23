@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh:*)",
+      "Bash(curl:*)",
+      "mcp__rfc2544-trafficgen__*",
+      "Skill(diagnose-rfc2544-server)"
+    ]
+  },
+  "autoApproveSkills": true
+}

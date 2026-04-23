@@ -373,7 +373,28 @@ async def get_mac_addresses(
         except httpx.HTTPStatusError as e:
             raise Exception(f"HTTP error from RFC2544 server: {e}")
 
+@mcp.prompt(
+    name="rfc2544-test",
+    description="Start rfc2544 trafficgen, wait for it to complete and display the result. Usage: /run-rfc2544-test ip port"
+)
+async def rfc2544_test(arguments: str) -> str:
+    parts = [p.strip() for p in arguments.split(":")]
+    ip = parts[0] if len(parts) > 0 else None
+    port = parts[1] if len(parts) > 1 else 8080
 
+    if not ip or not port:
+        return "Error: Usage: /run-rfc2544-test ip:port"
+
+    return f"""
+    Use start_trafficgen with these exact details:
+    - server_addr: {ip}
+    - server_port: {port}
+    - use the default values for other parameters
+
+    After the trafficgen started, use check_trafficgen_status every 5 second until the trafficgen is not running anymore; display the result when it is available
+    """
+    
+    
 if __name__ == "__main__":
     mcp.run()
 
